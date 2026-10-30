@@ -61,6 +61,7 @@ Contas do portal de clientes criam-se a partir da ficha do cliente ("Acesso ao p
 |---|---|
 | `npm run dev` | Servidor de desenvolvimento |
 | `npm test` | Testes unitários |
+| `npm run test:integration` | Testes com base de dados (motor, concorrência) — usam `TEST_DATABASE_URL`, nunca a BD de desenvolvimento |
 | `npm run typecheck` | Verificação de tipos TypeScript |
 | `npm run lint` | ESLint |
 | `npm run build` | Build de produção |
@@ -121,6 +122,12 @@ tests/unit/       testes (node:test via tsx)
 
 - O stock de um artigo = **stock inicial** (definido ao criar) **+ movimentos** (entrada, abate,
   ajuste). O stock nunca se edita diretamente; cada movimento fica registado com motivo, data e autor.
+- **Disponibilidade** (calculada, nunca guardada): stock total − reservas/alugueres (da entrega à
+  recolha + dias de preparação da categoria) − manutenção, dia a dia; o disponível de um período é o
+  mínimo dos dias. Devoluções parciais libertam só o que voltou; alugueres em atraso continuam a
+  ocupar até a devolução ser registada.
+- Reservar bloqueia os artigos e recalcula na mesma transação: pedidos simultâneos nunca
+  ultrapassam o stock.
 - Unidades em **manutenção** deixam de contar como disponíveis até a manutenção ser concluída; as
   unidades perdidas são abatidas automaticamente.
 - O sistema recusa movimentos que deixariam o stock negativo ou abaixo das unidades em manutenção.
@@ -132,7 +139,7 @@ tests/unit/       testes (node:test via tsx)
 - [x] **Fase 1** — estrutura, base de dados, autenticação, permissões, tema claro/escuro, layout
 - [x] **Fase 2** — dashboard, utilizadores e clientes
 - [~] **Fase 3** — artigos e inventário *(falta o importador de planilhas CSV/Excel)*
-- [ ] Fase 4 — motor de disponibilidade e calendário
+- [x] **Fase 4** — motor de disponibilidade, reservas diretas, calendário
 - [ ] Fase 5 — orçamentos
 - [ ] Fase 6 — PDF e email
 - [ ] Fase 7 — portal do cliente

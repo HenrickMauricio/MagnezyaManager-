@@ -3,8 +3,9 @@ import Link from "next/link";
 import { Boxes, FileText, Package, UserCog, Users } from "lucide-react";
 import { requirePagePermission } from "@/server/auth/session";
 import { auditTargetHref, describeAction, getDashboardOverview } from "@/server/services/dashboard";
+import { getOperationsSummary } from "@/server/services/rentals";
+import { OperationsCard } from "@/components/features/rentals/operations-card";
 import { Card, CardHeader, StatCard } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { formatDate, formatDateLong, formatDateTime, formatInteger } from "@/lib/format";
 import type { Permission } from "@/lib/permissions";
 
@@ -14,7 +15,10 @@ const iconProps = { className: "size-[18px]", strokeWidth: 1.75 } as const;
 
 export default async function DashboardPage() {
   const user = await requirePagePermission("dashboard:view");
-  const data = await getDashboardOverview(user);
+  const [data, operations] = await Promise.all([
+    getDashboardOverview(user),
+    user.permissions.has("rental:view") ? getOperationsSummary() : Promise.resolve(null),
+  ]);
   const firstName = user.name.split(" ")[0];
   const can = (permission: Permission) => user.permissions.has(permission);
   const canOpen = (href: string | null) =>
@@ -22,7 +26,8 @@ export default async function DashboardPage() {
     ((href.startsWith("/clientes") && user.permissions.has("client:view")) ||
       (href.startsWith("/utilizadores") && user.permissions.has("user:manage")) ||
       (href.startsWith("/artigos") && user.permissions.has("article:view")) ||
-      (href.startsWith("/categorias") && user.permissions.has("category:manage")));
+      (href.startsWith("/categorias") && user.permissions.has("category:manage")) ||
+      (href.startsWith("/reservas") && user.permissions.has("rental:view")));
 
   return (
     <div className="mx-auto max-w-7xl space-y-8">
@@ -85,7 +90,9 @@ export default async function DashboardPage() {
         )}
       </section>
 
-      <div className="grid gap-6 xl:grid-cols-2">
+      {operations && <OperationsCard data={operations} />}
+
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-2">
         {data.recentClients && (
           <Card>
             <CardHeader
@@ -156,16 +163,6 @@ export default async function DashboardPage() {
           </Card>
         )}
 
-        <Card className={data.recentActivity ? "xl:col-span-2" : undefined}>
-          <CardHeader
-            title="Disponibilidade e alugueres"
-            description="Alugados, em manutenção, próximos eventos e devoluções."
-            action={<Badge>Fase 4</Badge>}
-          />
-          <p className="px-5 py-10 text-center text-[14px] text-fg-muted">
-            Estes indicadores ficam ativos com o motor de disponibilidade e o calendário.
-          </p>
-        </Card>
       </div>
     </div>
   );

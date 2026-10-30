@@ -116,6 +116,11 @@ const ACTION_LABELS: Record<string, string> = {
   "maintenance.start": "Iniciou uma reparação",
   "maintenance.complete": "Concluiu uma manutenção",
   "maintenance.cancel": "Anulou uma manutenção",
+  "rental.create": "Criou uma reserva",
+  "rental.prepare": "Começou a preparar uma reserva",
+  "rental.deliver": "Registou uma entrega",
+  "rental.return": "Registou uma devolução",
+  "rental.cancel": "Cancelou uma reserva",
 };
 
 export function describeAction(action: string): string {
@@ -129,5 +134,6 @@ export function auditTargetHref(entity: string, entityId: string | null): string
   if (entity === "User") return `/utilizadores/${entityId}`;
   if (entity === "Article") return `/artigos/${entityId}`;
   if (entity === "Category") return "/categorias";
+  if (entity === "Rental") return `/reservas/${entityId}`;
   return null;
 }

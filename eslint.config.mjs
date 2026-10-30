@@ -11,5 +11,10 @@ export default defineConfig([
       "@typescript-eslint/no-unused-vars": ["warn", { ignoreRestSiblings: true, varsIgnorePattern: "^_" }],
     },
   },
+  {
+    // Ficheiros CommonJS (ex.: preparação dos testes de integração) usam require().
+    files: ["**/*.cjs"],
+    rules: { "@typescript-eslint/no-require-imports": "off" },
+  },
   globalIgnores([".next/**", "node_modules/**", "src/generated/**", "next-env.d.ts"]),
 ]);

@@ -3,13 +3,13 @@ import { prisma } from "@/server/db";
 import { assertPermission, type CurrentUser } from "@/server/auth/session";
 import { ConflictError, NotFoundError } from "@/server/errors";
 import { logAudit } from "@/server/services/audit";
+import { loadArticleStock } from "@/server/services/availability";
 import type { Prisma } from "@/generated/prisma/client";
 import {
   findShortage,
   maintenanceAt,
   signedQuantity,
   totalAt,
-  type MaintenancePeriod,
   type StockShortage,
 } from "@/lib/inventory";
 import { addDaysISO, dateOnlyToISO, formatISODate, isoToDateOnly, todayISO } from "@/lib/format";
@@ -25,21 +25,9 @@ type Tx = Prisma.TransactionClient;
 const OPEN_STATUSES = ["ABERTA", "EM_CURSO"] as const;
 export const MOVEMENT_PAGE_SIZE = 25;
 
-/** Período em que uma manutenção ocupa stock (convenção em src/lib/inventory.ts). */
-function maintenancePeriod(m: {
-  startDate: Date;
-  endDate: Date | null;
-  quantity: number;
-  status: string;
-}): MaintenancePeriod {
-  const start = dateOnlyToISO(m.startDate);
-  if (m.endDate === null) return { start, end: null, quantity: m.quantity };
-  return { start, end: addDaysISO(dateOnlyToISO(m.endDate), -1), quantity: m.quantity };
-}
-
 /**
- * Stock total e unidades em manutenção hoje, por artigo.
- * (As reservas de alugueres entram no motor de disponibilidade, Fase 4.)
+ * Stock total e unidades em manutenção hoje, por artigo (para listas).
+ * A disponibilidade com reservas vem do motor (services/availability).
  */
 export async function getStockFigures(articleIds: string[], date = todayISO()) {
   const result = new Map<string, { total: number; inMaintenance: number }>();
@@ -69,33 +57,25 @@ export async function getStockFigures(articleIds: string[], date = todayISO()) {
   return result;
 }
 
-/** Bloqueia o artigo e devolve o seu histórico de stock (dentro de uma transação). */
+/**
+ * Bloqueia o artigo (SELECT … FOR UPDATE) e devolve o seu histórico de stock
+ * com todas as ocupações — reservas e manutenções — vindas do motor.
+ */
 async function lockArticleStock(tx: Tx, articleId: string) {
   await tx.$queryRaw`SELECT id FROM articles WHERE id = ${articleId} FOR UPDATE`;
   const article = await tx.article.findUnique({
     where: { id: articleId },
-    select: {
-      id: true,
-      name: true,
-      unit: true,
-      stockBase: true,
-      archivedAt: true,
-      movements: { select: { effectiveDate: true, quantity: true } },
-      maintenances: { select: { id: true, startDate: true, endDate: true, quantity: true, status: true } },
-    },
+    select: { id: true, name: true, unit: true, stockBase: true, archivedAt: true },
   });
   if (!article) throw new NotFoundError("Artigo não encontrado.");
-  return {
-    article,
-    movements: article.movements.map((m) => ({ date: dateOnlyToISO(m.effectiveDate), quantity: m.quantity })),
-    periods: article.maintenances.map(maintenancePeriod),
-  };
+  const stock = (await loadArticleStock(tx, [articleId])).get(articleId)!;
+  return { article, movements: stock.movements, periods: stock.occupancies };
 }
 
 function shortageMessage(s: StockShortage, unit: string): string {
   const date = formatISODate(s.date);
   if (s.total < 0) return `O stock ficaria negativo a ${date} (${s.total} ${unit}).`;
-  return `A ${date} o stock seria ${s.total} ${unit}, mas há ${s.inMaintenance} em manutenção.`;
+  return `A ${date} o stock seria ${s.total} ${unit}, mas há ${s.inMaintenance} ocupadas (reservas e manutenção).`;
 }
 
 // ---------------------------------------------------------------------------
@@ -210,7 +190,7 @@ export async function createMaintenance(user: CurrentUser, articleId: string, in
     if (shortage) {
       const free = totalAt(article.stockBase, movements, shortage.date) - maintenanceAt(periods, shortage.date);
       throw new ConflictError(
-        `Só há ${Math.max(0, free)} ${article.unit} disponíveis para manutenção a ${formatISODate(shortage.date)}.`,
+        `Só há ${Math.max(0, free)} ${article.unit} livres a ${formatISODate(shortage.date)} (descontando reservas e manutenções).`,
       );
     }
 
@@ -279,7 +259,7 @@ export async function completeMaintenance(user: CurrentUser, id: string, input: 
     }
 
     if (input.lostQuantity > 0) {
-      const others = periods.filter((_, i) => article.maintenances[i]!.id !== id);
+      const others = periods.filter((p) => p.refId !== id);
       const closed = { start, end: addDaysISO(input.endDate, -1), quantity: m.quantity };
       const shortage = findShortage(
         article.stockBase,

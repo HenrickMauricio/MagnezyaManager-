@@ -44,9 +44,9 @@ export const NAV: NavGroup[] = [
   {
     label: "Operação",
     items: [
-      { label: "Calendário", href: "/calendario", icon: "calendar", permission: "calendar:view", availableInPhase: 4 },
-      { label: "Disponibilidade", href: "/disponibilidade", icon: "availability", permission: "availability:view", availableInPhase: 4 },
-      { label: "Reservas", href: "/reservas", icon: "rentals", permission: "rental:view", availableInPhase: 4 },
+      { label: "Calendário", href: "/calendario", icon: "calendar", permission: "calendar:view" },
+      { label: "Disponibilidade", href: "/disponibilidade", icon: "availability", permission: "availability:view" },
+      { label: "Reservas", href: "/reservas", icon: "rentals", permission: "rental:view" },
     ],
   },
   {

@@ -148,6 +148,54 @@
   }
 }
 
+/* Calendário (FullCalendar) com os tokens da aplicação — funciona no tema claro e escuro. */
+.mz-calendar {
+  --fc-border-color: var(--border);
+  --fc-page-bg-color: var(--surface);
+  --fc-neutral-bg-color: var(--surface-2);
+  --fc-list-event-hover-bg-color: var(--surface-2);
+  --fc-today-bg-color: var(--surface-2);
+  --fc-button-text-color: var(--fg);
+  --fc-button-bg-color: var(--surface-2);
+  --fc-button-border-color: transparent;
+  --fc-button-hover-bg-color: var(--surface-3);
+  --fc-button-hover-border-color: transparent;
+  --fc-button-active-bg-color: var(--primary);
+  --fc-button-active-border-color: var(--primary);
+  font-size: 13px;
+}
+.mz-calendar .fc .fc-toolbar-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.mz-calendar .fc .fc-toolbar-title::first-letter {
+  text-transform: uppercase;
+}
+.mz-calendar .fc .fc-button {
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  text-transform: none;
+  box-shadow: none !important;
+}
+.mz-calendar .fc .fc-button-primary:not(:disabled).fc-button-active {
+  color: var(--primary-fg);
+}
+.mz-calendar .fc .fc-col-header-cell-cushion,
+.mz-calendar .fc .fc-daygrid-day-number {
+  color: var(--fg-muted);
+  text-decoration: none;
+}
+.mz-calendar .fc .fc-daygrid-event {
+  border-radius: 4px;
+  padding: 1px 4px;
+}
+.mz-calendar .fc .mz-overdue {
+  border-width: 2px;
+  border-style: dashed;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

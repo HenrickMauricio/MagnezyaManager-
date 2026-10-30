@@ -262,6 +262,101 @@ async function seedPeople() {
   await upsertUser({ email: "cliente@beta.example", name: "Contacto Beta", role: "CLIENTE", clientId: created[1]!.id });
 }
 
+/** Data "aaaa-mm-dd" em Lisboa, deslocada `days` dias a partir de hoje. */
+function dayFromToday(days: number): Date {
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Lisbon" }).format(new Date());
+  const d = new Date(`${today}T00:00:00.000Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d;
+}
+
+/**
+ * Reservas de demonstração à volta da data do seed (entregue, em atraso,
+ * em preparação, futuras e devolvida). Só são criadas se ainda não houver
+ * reservas — nunca alteram dados existentes.
+ */
+async function seedRentals() {
+  if ((await prisma.rental.count()) > 0) return;
+  const clients = await prisma.client.findMany({ where: { nif: { in: ["500000000", "501000003", "502000007"] } } });
+  const byNif = (nif: string) => clients.find((c) => c.nif === nif);
+  const admin = await prisma.user.findUnique({ where: { email: "admin@magnezya.test" } });
+
+  const demo: {
+    nif: string;
+    event: string;
+    city: string;
+    from: number;
+    to: number;
+    status: "RESERVADO" | "EM_PREPARACAO" | "ENTREGUE" | "DEVOLVIDO";
+    lines: [name: string, quantity: number][];
+  }[] = [
+    { nif: "501000003", event: "Congresso Anual de Medicina", city: "Porto", from: -5, to: 2, status: "ENTREGUE",
+      lines: [["Cadeira Congresso", 40], ["Mesa Alta Industrial", 6], ["Candeeiro Pé", 4]] },
+    { nif: "502000007", event: "Feira de Artesanato", city: "Braga", from: -10, to: -2, status: "ENTREGUE",
+      lines: [["Balcão Bar Recto", 2], ["Banco Alto Industrial", 8]] },
+    { nif: "500000000", event: "Lançamento de Produto", city: "Lisboa", from: 1, to: 3, status: "EM_PREPARACAO",
+      lines: [["Poltrona Chesterfield", 4], ["Puff Pêra Preto", 6], ["Mesa Alta Iluminada", 3]] },
+    { nif: "500000000", event: "Jantar de Natal da Empresa", city: "Lisboa", from: 4, to: 6, status: "RESERVADO",
+      lines: [["Cadeira Chiavari Decapé", 50], ["Mesa Alta Madeira", 8]] },
+    { nif: "501000003", event: "Workshop de Inovação", city: "Porto", from: 20, to: 22, status: "RESERVADO",
+      lines: [["Cadeira Ghost", 30], ["Poltrona Barcelona", 2]] },
+    { nif: "502000007", event: "Gala de Aniversário", city: "Braga", from: -20, to: -17, status: "DEVOLVIDO",
+      lines: [["Cadeira Chiavari Decapé", 30], ["Balcão Bar Curvo", 1]] },
+  ];
+
+  for (const r of demo) {
+    const client = byNif(r.nif);
+    if (!client) continue;
+    const delivery = dayFromToday(r.from);
+    const returnDate = dayFromToday(r.to);
+    const items = [];
+    for (const [name, wanted] of r.lines) {
+      const article = await prisma.article.findFirst({ where: { name }, include: { category: true } });
+      if (!article) continue;
+      const buffer = article.category.prepBufferDays;
+      const blockTo = new Date(returnDate);
+      blockTo.setUTCDate(blockTo.getUTCDate() + buffer);
+      // Nunca mais de metade do stock: as reservas de demonstração não criam conflitos.
+      const quantity = Math.max(1, Math.min(wanted, Math.floor(article.stockBase / 2)));
+      const returned = r.status === "DEVOLVIDO" ? quantity : 0;
+      items.push({ articleId: article.id, quantity, quantityReturned: returned, prepBufferDays: buffer, blockFrom: delivery, blockTo });
+    }
+    if (items.length === 0) continue;
+
+    const key = `RES-${delivery.getUTCFullYear()}`;
+    const seq = await prisma.documentSequence.upsert({ where: { key }, create: { key, last: 1 }, update: { last: { increment: 1 } } });
+    const event = await prisma.event.create({ data: { clientId: client.id, name: r.event, city: r.city } });
+    const delivered = r.status === "ENTREGUE" || r.status === "DEVOLVIDO";
+    const rental = await prisma.rental.create({
+      data: {
+        number: `${key}-${String(seq.last).padStart(4, "0")}`,
+        clientId: client.id,
+        eventId: event.id,
+        createdById: admin?.id,
+        status: r.status,
+        deliveryDate: delivery,
+        startDate: delivery,
+        endDate: returnDate,
+        returnDate,
+        actualDeliveryDate: delivered ? delivery : null,
+        actualReturnDate: r.status === "DEVOLVIDO" ? returnDate : null,
+        items: { create: items },
+      },
+      include: { items: true },
+    });
+    if (r.status === "DEVOLVIDO") {
+      await prisma.rentalReturn.create({
+        data: {
+          rentalId: rental.id,
+          returnedAt: returnDate,
+          receivedById: admin?.id,
+          lines: rental.items.map((i) => ({ rentalItemId: i.id, returned: i.quantity, damaged: 0 })),
+        },
+      });
+    }
+  }
+}
+
 async function main() {
   console.log("A sincronizar permissões e papéis…");
   await seedPermissionsAndRoles();
@@ -272,12 +367,15 @@ async function main() {
   await seedCatalog(defaultTax.id);
   console.log("A criar utilizadores e clientes de demonstração…");
   await seedPeople();
+  console.log("A criar reservas de demonstração…");
+  await seedRentals();
 
   const counts = {
     artigos: await prisma.article.count(),
     categorias: await prisma.category.count(),
     clientes: await prisma.client.count(),
     utilizadores: await prisma.user.count(),
+    reservas: await prisma.rental.count(),
   };
   console.log("Seed concluído:", counts);
   console.log(`Palavra-passe dos utilizadores de demonstração: ${DEFAULT_PASSWORD}`);

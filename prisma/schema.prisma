@@ -102,10 +102,10 @@ enum EmailStatus {
 // -----------------------------------------------------------------------------
 
 model User {
-  id            String   @id @default(cuid())
+  id            String  @id @default(cuid())
   name          String
-  email         String   @unique
-  emailVerified Boolean  @default(false)
+  email         String  @unique
+  emailVerified Boolean @default(false)
   image         String?
   phone         String?
 
@@ -119,12 +119,12 @@ model User {
   /// Desconto máximo que o vendedor pode aplicar sem aprovação (bp).
   maxDiscountBp Int @default(0)
 
-  active      Boolean   @default(true)
+  active             Boolean   @default(true)
   /// Palavra-passe temporária definida por um administrador: tem de ser
   /// alterada pelo próprio utilizador antes de usar a aplicação.
-  mustChangePassword Boolean @default(false)
-  lastLoginAt DateTime?
-  archivedAt  DateTime?
+  mustChangePassword Boolean   @default(false)
+  lastLoginAt        DateTime?
+  archivedAt         DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -138,6 +138,7 @@ model User {
   quotesApproved      Quote[]             @relation("QuoteApprovedBy")
   quotesInternallyOk  Quote[]             @relation("QuoteInternalApprovedBy")
   quoteVersionsIssued QuoteVersion[]
+  rentalsCreated      Rental[]            @relation("RentalCreatedBy")
   movements           InventoryMovement[]
   maintenances        Maintenance[]
   rentalReturns       RentalReturn[]
@@ -343,21 +344,21 @@ model TaxRate {
 }
 
 model Article {
-  id          String        @id @default(cuid())
-  sku         String        @unique
-  name        String
-  description String?
-  categoryId  String
-  category    Category      @relation(fields: [categoryId], references: [id])
+  id            String        @id @default(cuid())
+  sku           String        @unique
+  name          String
+  description   String?
+  categoryId    String
+  category      Category      @relation(fields: [categoryId], references: [id])
   /// Unidade de medida (un, m², conjunto, ...).
-  unit        String        @default("un")
-  priceCents  Int
-  priceUnit   PriceUnit     @default(POR_DIA)
-  taxRateId   String
-  taxRate     TaxRate       @relation(fields: [taxRateId], references: [id])
+  unit          String        @default("un")
+  priceCents    Int
+  priceUnit     PriceUnit     @default(POR_DIA)
+  taxRateId     String
+  taxRate       TaxRate       @relation(fields: [taxRateId], references: [id])
   /// Stock base inicial. O stock total efetivo = stockBase + movimentos.
-  stockBase   Int           @default(0)
-  status      ArticleStatus @default(ATIVO)
+  stockBase     Int           @default(0)
+  status        ArticleStatus @default(ATIVO)
   internalNotes String?
 
   /// Usado no SELECT ... FOR UPDATE ao reservar (controlo de concorrência).
@@ -463,16 +464,16 @@ model Event {
 }
 
 model AdditionalService {
-  id                String         @id @default(cuid())
+  id                String   @id @default(cuid())
   name              String
   description       String?
   defaultPriceCents Int
-  unit              String         @default("serviço")
+  unit              String   @default("serviço")
   taxRateId         String
-  taxRate           TaxRate        @relation(fields: [taxRateId], references: [id])
-  active            Boolean        @default(true)
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
+  taxRate           TaxRate  @relation(fields: [taxRateId], references: [id])
+  active            Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   quoteServices QuoteService[]
 
@@ -546,24 +547,24 @@ model Quote {
 }
 
 model QuoteItem {
-  id             String    @id @default(cuid())
-  quoteId        String
-  quote          Quote     @relation(fields: [quoteId], references: [id], onDelete: Cascade)
-  articleId      String
-  article        Article   @relation(fields: [articleId], references: [id])
-  quantity       Int
+  id               String    @id @default(cuid())
+  quoteId          String
+  quote            Quote     @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  articleId        String
+  article          Article   @relation(fields: [articleId], references: [id])
+  quantity         Int
   /// Snapshot do preço no momento em que foi adicionado.
-  unitPriceCents Int
-  priceUnit      PriceUnit
+  unitPriceCents   Int
+  priceUnit        PriceUnit
   /// Número de dias faturáveis (para POR_DIA).
-  billableDays   Int       @default(1)
-  discountBp     Int       @default(0)
-  taxRateBp      Int
+  billableDays     Int       @default(1)
+  discountBp       Int       @default(0)
+  taxRateBp        Int
   taxExemptionCode String?
-  nameSnapshot   String
-  skuSnapshot    String
-  sortOrder      Int       @default(0)
-  lineTotalCents Int       @default(0)
+  nameSnapshot     String
+  skuSnapshot      String
+  sortOrder        Int       @default(0)
+  lineTotalCents   Int       @default(0)
 
   @@index([quoteId])
   @@index([articleId])
@@ -571,18 +572,18 @@ model QuoteItem {
 }
 
 model QuoteService {
-  id             String             @id @default(cuid())
-  quoteId        String
-  quote          Quote              @relation(fields: [quoteId], references: [id], onDelete: Cascade)
-  serviceId      String?
-  service        AdditionalService? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
-  description    String
-  quantity       Int                @default(1)
-  unitPriceCents Int
-  taxRateBp      Int
+  id               String             @id @default(cuid())
+  quoteId          String
+  quote            Quote              @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  serviceId        String?
+  service          AdditionalService? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  description      String
+  quantity         Int                @default(1)
+  unitPriceCents   Int
+  taxRateBp        Int
   taxExemptionCode String?
-  sortOrder      Int                @default(0)
-  lineTotalCents Int                @default(0)
+  sortOrder        Int                @default(0)
+  lineTotalCents   Int                @default(0)
 
   @@index([quoteId])
   @@map("quote_services")
@@ -613,23 +614,29 @@ model QuoteVersion {
 // -----------------------------------------------------------------------------
 
 model Rental {
-  id      String       @id @default(cuid())
+  id          String       @id @default(cuid())
   /// Ex.: "RES-2026-0001".
-  number  String       @unique
-  quoteId String       @unique
-  quote   Quote        @relation(fields: [quoteId], references: [id])
-  clientId String
-  client  Client       @relation(fields: [clientId], references: [id])
-  eventId String
-  event   Event        @relation(fields: [eventId], references: [id])
-  status  RentalStatus @default(RESERVADO)
+  number      String       @unique
+  /// Orçamento de origem; vazio numa reserva direta (sem orçamento).
+  quoteId     String?      @unique
+  quote       Quote?       @relation(fields: [quoteId], references: [id])
+  createdById String?
+  createdBy   User?        @relation("RentalCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  clientId    String
+  client      Client       @relation(fields: [clientId], references: [id])
+  eventId     String
+  event       Event        @relation(fields: [eventId], references: [id])
+  status      RentalStatus @default(RESERVADO)
 
-  deliveryDate     DateTime  @db.Date
-  startDate        DateTime  @db.Date
-  endDate          DateTime  @db.Date
-  returnDate       DateTime  @db.Date
-  actualReturnDate DateTime? @db.Date
-  notes            String?
+  deliveryDate       DateTime  @db.Date
+  startDate          DateTime  @db.Date
+  endDate            DateTime  @db.Date
+  returnDate         DateTime  @db.Date
+  /// Data real da entrega (registada ao marcar como entregue).
+  actualDeliveryDate DateTime? @db.Date
+  actualReturnDate   DateTime? @db.Date
+  cancelledAt        DateTime?
+  notes              String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -644,14 +651,16 @@ model Rental {
 }
 
 model RentalItem {
-  id               String  @id @default(cuid())
+  id               String   @id @default(cuid())
   rentalId         String
-  rental           Rental  @relation(fields: [rentalId], references: [id], onDelete: Cascade)
+  rental           Rental   @relation(fields: [rentalId], references: [id], onDelete: Cascade)
   articleId        String
-  article          Article @relation(fields: [articleId], references: [id])
+  article          Article  @relation(fields: [articleId], references: [id])
   quantity         Int
-  quantityReturned Int     @default(0)
-  quantityDamaged  Int     @default(0)
+  quantityReturned Int      @default(0)
+  quantityDamaged  Int      @default(0)
+  /// Dias de preparação da categoria no momento da reserva (snapshot).
+  prepBufferDays   Int      @default(0)
   /// Período em que ocupa stock (entrega → recolha + buffer de preparação).
   blockFrom        DateTime @db.Date
   blockTo          DateTime @db.Date

@@ -452,6 +452,19 @@ A Magnezya desistiu do sistema. O projeto continua como **produto próprio**, pa
 | P7 | **Importador de planilhas** com um modelo próprio descarregável, em vez da planilha de um cliente concreto. |
 | P8 | **Conjuntos/kits** (171 "sets" do catálogo: ex. sofá + 2 poltronas + mesa) como funcionalidade nova: um conjunto é composto por peças e ocupa o stock delas. Entra depois do motor de disponibilidade (Fase 4). Os conjuntos já estão guardados no ficheiro do catálogo. |
 
+### 8.4 Decisões da Fase 4 (30/10/2026)
+
+| # | Decisão |
+|---|---|
+| F1 | **Reservas diretas:** uma reserva pode existir sem orçamento (`Rental.quoteId` opcional) — pedidos por telefone, clientes habituais, eventos internos. Na Fase 5, aprovar um orçamento cria a reserva pelo mesmo serviço. |
+| F2 | **Ocupação:** entrega → recolha + dias de preparação (guardados na linha no momento da reserva). Devolvidas em bom estado a D ocupam até D + preparação; danificadas a D ocupam até D−1 e passam a manutenção a partir de D. Atraso: ocupa até hoje + 1 dia + preparação, até a devolução ser registada. |
+| F3 | **Conflito de stock** (D6) aparece como disponível negativo; uma reserva em conflito não pode ser entregue. |
+| F4 | **Concorrência:** bloqueio dos artigos por ordem de id (`SELECT … FOR UPDATE`), recálculo dentro da transação, numeração `RES-aaaa-nnnn` sem buracos (sequência na mesma transação). Testado com 12 pedidos simultâneos. |
+| F5 | **Testes de integração** numa base de dados separada (`magnezya_test`, `TEST_DATABASE_URL`). |
+| F6 | **Calendário:** FullCalendar 6.1.21 (MIT), vistas mês/semana/lista; a grelha por artigo é própria (risco R7). |
+
+**Pendente para fases seguintes:** editar datas/linhas de uma reserva existente (hoje: cancelar e criar de novo); "procura pendente" de orçamentos enviados (D3) quando existirem orçamentos (Fase 5); conjuntos/kits (P8).
+
 ## 8.1 Questões originais (histórico)
 
 **D1 — Modelo de preço.** O preço de aluguer é (a) por evento/período (ex.: até 3 dias), (b) por dia, ou (c) degressivo (1.º dia preço total, dias seguintes com desconto)? *Proposta:* suportar (a) e (b) por artigo, com (c) como regra opcional.
