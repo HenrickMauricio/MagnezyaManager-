@@ -1,0 +1,26 @@
+# Serviços de desenvolvimento local.
+# Arrancar:  npm run db:up      Parar:  npm run db:down
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: magnezya-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: magnezya
+      POSTGRES_PASSWORD: magnezya_dev
+      POSTGRES_DB: magnezya
+      TZ: Europe/Lisbon
+      PGTZ: Europe/Lisbon
+    ports:
+      # 5433 no PC para não colidir com outro PostgreSQL já instalado.
+      - "5433:5432"
+    volumes:
+      - magnezya_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U magnezya -d magnezya"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  magnezya_pgdata:

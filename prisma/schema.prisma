@@ -1,0 +1,749 @@
+// =============================================================================
+// Magnezya – Event Support Management System
+// Modelo de dados (PostgreSQL + Prisma 7)
+//
+// Convenções:
+//  - Valores monetários em CÊNTIMOS (Int). Nunca float.
+//  - Percentagens em pontos-base (bp): 2300 = 23,00 %.
+//  - Datas de calendário (períodos de aluguer) em @db.Date, interpretadas no
+//    fuso Europe/Lisbon. Datas/hora de auditoria em timestamptz.
+//  - Disponibilidade NÃO é guardada: é calculada pelo serviço de disponibilidade.
+//  - Arquivo lógico (archivedAt) em vez de eliminação para não partir histórico.
+// =============================================================================
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// -----------------------------------------------------------------------------
+// Enums
+// -----------------------------------------------------------------------------
+
+enum RoleKey {
+  ADMIN
+  VENDEDOR
+  CLIENTE
+}
+
+enum ClientType {
+  EMPRESA
+  PARTICULAR
+}
+
+enum ArticleStatus {
+  ATIVO
+  INATIVO
+  DESCONTINUADO
+}
+
+/// Unidade de cobrança. Regra inicial validada: POR_DIA (D1).
+enum PriceUnit {
+  POR_DIA
+  POR_EVENTO
+}
+
+enum MovementType {
+  ENTRADA // aquisição / reforço de stock
+  ABATE // perda definitiva (reduz stock total)
+  AJUSTE // correção de inventário (+/-)
+}
+
+enum MaintenanceStatus {
+  ABERTA
+  EM_CURSO
+  CONCLUIDA
+  ABATIDA
+}
+
+enum QuoteStatus {
+  RASCUNHO
+  AGUARDANDO_APROVACAO // aprovação interna (desconto acima do limite) — D4
+  ENVIADO
+  APROVADO
+  REJEITADO
+  EXPIRADO
+  CANCELADO
+}
+
+enum ApprovalChannel {
+  INTERNO
+  PORTAL
+}
+
+enum RentalStatus {
+  RESERVADO
+  CONFLITO_STOCK // aprovado pelo cliente sem stock suficiente — D6
+  EM_PREPARACAO
+  ENTREGUE
+  EM_DEVOLUCAO
+  DEVOLVIDO
+  CANCELADO
+}
+
+enum TaxRegion {
+  CONTINENTE
+  ACORES
+  MADEIRA
+}
+
+enum EmailStatus {
+  PENDENTE
+  ENVIADO
+  FALHOU
+}
+
+// -----------------------------------------------------------------------------
+// Autenticação (Better Auth) + utilizadores
+// -----------------------------------------------------------------------------
+
+model User {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  image         String?
+  phone         String?
+
+  roleId String
+  role   Role   @relation(fields: [roleId], references: [id])
+
+  /// Preenchido apenas para utilizadores do portal (papel CLIENTE).
+  clientId String?
+  client   Client? @relation("ClientPortalUsers", fields: [clientId], references: [id])
+
+  /// Desconto máximo que o vendedor pode aplicar sem aprovação (bp).
+  maxDiscountBp Int @default(0)
+
+  active      Boolean   @default(true)
+  lastLoginAt DateTime?
+  archivedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions            Session[]
+  accounts            Account[]
+  permissionOverrides UserPermissionOverride[]
+
+  clientsCreated      Client[]            @relation("ClientCreatedBy")
+  quotesCreated       Quote[]             @relation("QuoteCreatedBy")
+  quotesApproved      Quote[]             @relation("QuoteApprovedBy")
+  quotesInternallyOk  Quote[]             @relation("QuoteInternalApprovedBy")
+  quoteVersionsIssued QuoteVersion[]
+  movements           InventoryMovement[]
+  maintenances        Maintenance[]
+  rentalReturns       RentalReturn[]
+  auditLogs           AuditLog[]
+
+  @@index([roleId])
+  @@index([clientId])
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  /// Hash da palavra-passe (gerido pelo Better Auth).
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verifications")
+}
+
+model Role {
+  id          String           @id @default(cuid())
+  key         RoleKey          @unique
+  name        String
+  description String?
+  permissions RolePermission[]
+  users       User[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String                   @id @default(cuid())
+  /// Ex.: "quote:create", "article:write".
+  key         String                   @unique
+  description String
+  roles       RolePermission[]
+  overrides   UserPermissionOverride[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+/// Permite conceder ou retirar uma permissão a um utilizador específico.
+model UserPermissionOverride {
+  userId       String
+  permissionId String
+  granted      Boolean
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@id([userId, permissionId])
+  @@map("user_permission_overrides")
+}
+
+// -----------------------------------------------------------------------------
+// Clientes
+// -----------------------------------------------------------------------------
+
+model Client {
+  id             String     @id @default(cuid())
+  type           ClientType @default(EMPRESA)
+  name           String
+  nif            String?
+  email          String?
+  phone          String?
+  billingAddress String?
+  postalCode     String?
+  city           String?
+  country        String     @default("PT")
+  notes          String?
+
+  /// RGPD: data de consentimento / base legal registada.
+  gdprConsentAt DateTime?
+  /// RGPD: dados anonimizados a pedido do titular.
+  anonymizedAt  DateTime?
+
+  createdById String?
+  createdBy   User?     @relation("ClientCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  archivedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  contacts    ClientContact[]
+  portalUsers User[]          @relation("ClientPortalUsers")
+  events      Event[]
+  quotes      Quote[]
+  rentals     Rental[]
+
+  @@index([name])
+  @@index([nif])
+  @@map("clients")
+}
+
+model ClientContact {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  name      String
+  jobTitle  String?
+  email     String?
+  phone     String?
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clientId])
+  @@map("client_contacts")
+}
+
+// -----------------------------------------------------------------------------
+// Catálogo e inventário
+// -----------------------------------------------------------------------------
+
+model Category {
+  id             String    @id @default(cuid())
+  name           String    @unique
+  slug           String    @unique
+  description    String?
+  sortOrder      Int       @default(0)
+  /// Dias de preparação/limpeza após recolha em que o artigo continua ocupado.
+  prepBufferDays Int       @default(0)
+  archivedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  articles Article[]
+
+  @@map("categories")
+}
+
+model TaxRate {
+  id            String    @id @default(cuid())
+  name          String
+  rateBp        Int
+  region        TaxRegion @default(CONTINENTE)
+  /// Código de motivo de isenção (ex.: "M07"), quando rateBp = 0.
+  exemptionCode String?
+  exemptionText String?
+  isDefault     Boolean   @default(false)
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  articles           Article[]
+  additionalServices AdditionalService[]
+  companyDefaults    CompanySettings[]
+
+  @@unique([name, region])
+  @@map("tax_rates")
+}
+
+model Article {
+  id          String        @id @default(cuid())
+  sku         String        @unique
+  name        String
+  description String?
+  categoryId  String
+  category    Category      @relation(fields: [categoryId], references: [id])
+  /// Unidade de medida (un, m², conjunto, ...).
+  unit        String        @default("un")
+  priceCents  Int
+  priceUnit   PriceUnit     @default(POR_DIA)
+  taxRateId   String
+  taxRate     TaxRate       @relation(fields: [taxRateId], references: [id])
+  /// Stock base inicial. O stock total efetivo = stockBase + movimentos.
+  stockBase   Int           @default(0)
+  status      ArticleStatus @default(ATIVO)
+  internalNotes String?
+
+  /// Usado no SELECT ... FOR UPDATE ao reservar (controlo de concorrência).
+  lockVersion Int       @default(0)
+  archivedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  images       ArticleImage[]
+  movements    InventoryMovement[]
+  maintenances Maintenance[]
+  quoteItems   QuoteItem[]
+  rentalItems  RentalItem[]
+
+  @@index([categoryId])
+  @@index([name])
+  @@index([status])
+  @@map("articles")
+}
+
+model ArticleImage {
+  id         String   @id @default(cuid())
+  articleId  String
+  article    Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  storageKey String
+  alt        String?
+  sortOrder  Int      @default(0)
+  isPrimary  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([articleId])
+  @@map("article_images")
+}
+
+/// Toda a alteração ao stock total passa por um movimento auditado.
+model InventoryMovement {
+  id            String       @id @default(cuid())
+  articleId     String
+  article       Article      @relation(fields: [articleId], references: [id])
+  type          MovementType
+  /// Positivo para entradas, negativo para saídas/abates.
+  quantity      Int
+  effectiveDate DateTime     @db.Date
+  reason        String
+  userId        String?
+  user          User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  maintenanceId String?
+  maintenance   Maintenance? @relation(fields: [maintenanceId], references: [id], onDelete: SetNull)
+  createdAt     DateTime     @default(now())
+
+  @@index([articleId, effectiveDate])
+  @@map("inventory_movements")
+}
+
+/// Unidades danificadas / em manutenção, retiradas temporariamente do stock.
+model Maintenance {
+  id              String            @id @default(cuid())
+  articleId       String
+  article         Article           @relation(fields: [articleId], references: [id])
+  quantity        Int
+  status          MaintenanceStatus @default(ABERTA)
+  startDate       DateTime          @db.Date
+  /// Previsão; null = indefinido (ocupa stock até ser concluída).
+  expectedEndDate DateTime?         @db.Date
+  endDate         DateTime?         @db.Date
+  reason          String
+  costCents       Int?
+  rentalId        String?
+  rental          Rental?           @relation(fields: [rentalId], references: [id], onDelete: SetNull)
+  userId          String?
+  user            User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  movements InventoryMovement[]
+
+  @@index([articleId, startDate, endDate])
+  @@index([status])
+  @@map("maintenances")
+}
+
+// -----------------------------------------------------------------------------
+// Eventos, orçamentos e versões
+// -----------------------------------------------------------------------------
+
+model Event {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id])
+  name      String
+  venue     String?
+  address   String?
+  city      String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  quotes  Quote[]
+  rentals Rental[]
+
+  @@index([clientId])
+  @@map("events")
+}
+
+model AdditionalService {
+  id                String         @id @default(cuid())
+  name              String
+  description       String?
+  defaultPriceCents Int
+  unit              String         @default("serviço")
+  taxRateId         String
+  taxRate           TaxRate        @relation(fields: [taxRateId], references: [id])
+  active            Boolean        @default(true)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  quoteServices QuoteService[]
+
+  @@map("additional_services")
+}
+
+model Quote {
+  id     String @id @default(cuid())
+  /// Ex.: "ORC-2026-0001" (gerado por DocumentSequence).
+  number String @unique
+
+  clientId    String
+  client      Client @relation(fields: [clientId], references: [id])
+  eventId     String
+  event       Event  @relation(fields: [eventId], references: [id])
+  createdById String
+  createdBy   User   @relation("QuoteCreatedBy", fields: [createdById], references: [id])
+
+  status QuoteStatus @default(RASCUNHO)
+
+  deliveryDate DateTime @db.Date // entrega / montagem
+  startDate    DateTime @db.Date // início do aluguer
+  endDate      DateTime @db.Date // fim do aluguer
+  returnDate   DateTime @db.Date // devolução / recolha
+  validUntil   DateTime @db.Date
+
+  /// Desconto global sobre os artigos (bp), além dos descontos por linha.
+  discountBp    Int     @default(0)
+  notes         String?
+  internalNotes String?
+  terms         String?
+
+  // Totais calculados SEMPRE no servidor (motor de preço).
+  subtotalCents Int @default(0)
+  discountCents Int @default(0)
+  servicesCents Int @default(0)
+  taxCents      Int @default(0)
+  totalCents    Int @default(0)
+
+  /// Número da última versão emitida (0 = nunca emitido).
+  currentVersion Int @default(0)
+  /// Bloqueio otimista: incrementado em cada alteração.
+  lockVersion    Int @default(0)
+
+  internalApprovedById String?
+  internalApprovedBy   User?            @relation("QuoteInternalApprovedBy", fields: [internalApprovedById], references: [id], onDelete: SetNull)
+  internalApprovedAt   DateTime?
+  sentAt               DateTime?
+  approvedAt           DateTime?
+  approvedById         String?
+  approvedBy           User?            @relation("QuoteApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  approvedVia          ApprovalChannel?
+  approvalIp           String?
+  rejectedAt           DateTime?
+  rejectedReason       String?
+  cancelledAt          DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items    QuoteItem[]
+  services QuoteService[]
+  versions QuoteVersion[]
+  rental   Rental?
+
+  @@index([status])
+  @@index([clientId])
+  @@index([createdById])
+  @@index([deliveryDate, returnDate])
+  @@map("quotes")
+}
+
+model QuoteItem {
+  id             String    @id @default(cuid())
+  quoteId        String
+  quote          Quote     @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  articleId      String
+  article        Article   @relation(fields: [articleId], references: [id])
+  quantity       Int
+  /// Snapshot do preço no momento em que foi adicionado.
+  unitPriceCents Int
+  priceUnit      PriceUnit
+  /// Número de dias faturáveis (para POR_DIA).
+  billableDays   Int       @default(1)
+  discountBp     Int       @default(0)
+  taxRateBp      Int
+  taxExemptionCode String?
+  nameSnapshot   String
+  skuSnapshot    String
+  sortOrder      Int       @default(0)
+  lineTotalCents Int       @default(0)
+
+  @@index([quoteId])
+  @@index([articleId])
+  @@map("quote_items")
+}
+
+model QuoteService {
+  id             String             @id @default(cuid())
+  quoteId        String
+  quote          Quote              @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  serviceId      String?
+  service        AdditionalService? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  description    String
+  quantity       Int                @default(1)
+  unitPriceCents Int
+  taxRateBp      Int
+  taxExemptionCode String?
+  sortOrder      Int                @default(0)
+  lineTotalCents Int                @default(0)
+
+  @@index([quoteId])
+  @@map("quote_services")
+}
+
+/// Cópia imutável de cada versão emitida (preços e condições congelados).
+model QuoteVersion {
+  id            String   @id @default(cuid())
+  quoteId       String
+  quote         Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  versionNumber Int
+  snapshot      Json
+  totalCents    Int
+  pdfStorageKey String?
+  pdfSha256     String?
+  issuedById    String?
+  issuedBy      User?    @relation(fields: [issuedById], references: [id], onDelete: SetNull)
+  issuedAt      DateTime @default(now())
+
+  emails EmailLog[]
+
+  @@unique([quoteId, versionNumber])
+  @@map("quote_versions")
+}
+
+// -----------------------------------------------------------------------------
+// Reservas / alugueres
+// -----------------------------------------------------------------------------
+
+model Rental {
+  id      String       @id @default(cuid())
+  /// Ex.: "RES-2026-0001".
+  number  String       @unique
+  quoteId String       @unique
+  quote   Quote        @relation(fields: [quoteId], references: [id])
+  clientId String
+  client  Client       @relation(fields: [clientId], references: [id])
+  eventId String
+  event   Event        @relation(fields: [eventId], references: [id])
+  status  RentalStatus @default(RESERVADO)
+
+  deliveryDate     DateTime  @db.Date
+  startDate        DateTime  @db.Date
+  endDate          DateTime  @db.Date
+  returnDate       DateTime  @db.Date
+  actualReturnDate DateTime? @db.Date
+  notes            String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items        RentalItem[]
+  returns      RentalReturn[]
+  maintenances Maintenance[]
+
+  @@index([status, deliveryDate, returnDate])
+  @@index([clientId])
+  @@map("rentals")
+}
+
+model RentalItem {
+  id               String  @id @default(cuid())
+  rentalId         String
+  rental           Rental  @relation(fields: [rentalId], references: [id], onDelete: Cascade)
+  articleId        String
+  article          Article @relation(fields: [articleId], references: [id])
+  quantity         Int
+  quantityReturned Int     @default(0)
+  quantityDamaged  Int     @default(0)
+  /// Período em que ocupa stock (entrega → recolha + buffer de preparação).
+  blockFrom        DateTime @db.Date
+  blockTo          DateTime @db.Date
+
+  @@index([articleId, blockFrom, blockTo])
+  @@index([rentalId])
+  @@map("rental_items")
+}
+
+model RentalReturn {
+  id           String   @id @default(cuid())
+  rentalId     String
+  rental       Rental   @relation(fields: [rentalId], references: [id], onDelete: Cascade)
+  returnedAt   DateTime @db.Date
+  receivedById String?
+  receivedBy   User?    @relation(fields: [receivedById], references: [id], onDelete: SetNull)
+  /// [{ rentalItemId, returned, damaged }]
+  lines        Json
+  notes        String?
+  createdAt    DateTime @default(now())
+
+  @@index([rentalId])
+  @@map("rental_returns")
+}
+
+// -----------------------------------------------------------------------------
+// Configuração, numeração, auditoria e email
+// -----------------------------------------------------------------------------
+
+/// Linha única (id = "default").
+model CompanySettings {
+  id                    String   @id @default("default")
+  legalName             String
+  tradeName             String
+  nif                   String?
+  address               String?
+  postalCode            String?
+  city                  String?
+  country               String   @default("Portugal")
+  phone                 String?
+  email                 String?
+  website               String?
+  iban                  String?
+  logoKey               String?
+  logoWhiteKey          String?
+  quotePrefix           String   @default("ORC")
+  rentalPrefix          String   @default("RES")
+  quoteValidityDays     Int      @default(15)
+  defaultTerms          String?
+  defaultTaxRateId      String?
+  defaultTaxRate        TaxRate? @relation(fields: [defaultTaxRateId], references: [id], onDelete: SetNull)
+  prepBufferDaysDefault Int      @default(0)
+  emailFromName         String?
+  emailFromAddress      String?
+  updatedAt             DateTime @updatedAt
+
+  @@map("company_settings")
+}
+
+/// Numeração sequencial sem buracos (bloqueada em transação).
+model DocumentSequence {
+  key  String @id // ex.: "ORC-2026"
+  last Int    @default(0)
+
+  @@map("document_sequences")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action    String
+  entity    String
+  entityId  String?
+  before    Json?
+  after     Json?
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([actorId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model EmailLog {
+  id             String        @id @default(cuid())
+  quoteVersionId String?
+  quoteVersion   QuoteVersion? @relation(fields: [quoteVersionId], references: [id], onDelete: SetNull)
+  to             String
+  subject        String
+  status         EmailStatus   @default(PENDENTE)
+  providerId     String?
+  error          String?
+  createdAt      DateTime      @default(now())
+
+  @@index([quoteVersionId])
+  @@map("email_logs")
+}

@@ -1,0 +1,156 @@
+@import "tailwindcss";
+
+/* Tema escuro controlado pela classe .dark no <html> (preferência persistida). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* -------------------------------------------------------------------------
+   Design tokens Magnezya
+   Monocromático (preto / branco / cinzas). Cor apenas para estados.
+   ------------------------------------------------------------------------- */
+:root {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f6f6f6;
+  --surface-3: #eeeeee;
+  --fg: #000000;
+  --fg-muted: #545454;
+  --fg-subtle: #8a8a8a;
+  --border: #e5e5e5;
+  --border-strong: #cbcbcb;
+  --primary: #000000;
+  --primary-fg: #ffffff;
+  --ring: #000000;
+
+  /* Estados (usados com moderação: badges, indicadores do calendário) */
+  --success: #0e8345;
+  --success-bg: #e6f2ec;
+  --warning: #9a6700;
+  --warning-bg: #fbf3e0;
+  --danger: #c4161c;
+  --danger-bg: #fbe9e9;
+  --info: #276ef1;
+  --info-bg: #e9f0fe;
+
+  --sidebar-bg: #000000;
+  --sidebar-fg: #ffffff;
+  --sidebar-muted: #9b9b9b;
+  --sidebar-hover: #1a1a1a;
+  --sidebar-active: #ffffff;
+  --sidebar-active-fg: #000000;
+
+  color-scheme: light;
+}
+
+.dark {
+  --bg: #000000;
+  --surface: #0d0d0d;
+  --surface-2: #151515;
+  --surface-3: #1f1f1f;
+  --fg: #ffffff;
+  --fg-muted: #b3b3b3;
+  --fg-subtle: #7a7a7a;
+  --border: #242424;
+  --border-strong: #3a3a3a;
+  --primary: #ffffff;
+  --primary-fg: #000000;
+  --ring: #ffffff;
+
+  --success: #3ecf8e;
+  --success-bg: #0c2a1c;
+  --warning: #f0b429;
+  --warning-bg: #2d2208;
+  --danger: #ff5a5f;
+  --danger-bg: #2e0f10;
+  --info: #6ea2ff;
+  --info-bg: #0f1d38;
+
+  --sidebar-bg: #0a0a0a;
+  --sidebar-fg: #ffffff;
+  --sidebar-muted: #8a8a8a;
+  --sidebar-hover: #161616;
+  --sidebar-active: #ffffff;
+  --sidebar-active-fg: #000000;
+
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-primary: var(--primary);
+  --color-primary-fg: var(--primary-fg);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
+  --color-warning: var(--warning);
+  --color-warning-bg: var(--warning-bg);
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+  --color-info: var(--info);
+  --color-info-bg: var(--info-bg);
+  --color-sidebar: var(--sidebar-bg);
+  --color-sidebar-fg: var(--sidebar-fg);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-hover: var(--sidebar-hover);
+  --color-sidebar-active: var(--sidebar-active);
+  --color-sidebar-active-fg: var(--sidebar-active-fg);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-inter-tight), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --animate-fade-in: fade-in 180ms ease-out both;
+  --animate-slide-in: slide-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes slide-in {
+  from { transform: translateX(-100%); }
+  to { transform: none; }
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01";
+    transition: background-color 160ms ease, color 160ms ease;
+  }
+  ::selection {
+    background: var(--fg);
+    color: var(--bg);
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
