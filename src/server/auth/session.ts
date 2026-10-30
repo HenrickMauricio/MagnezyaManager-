@@ -21,8 +21,12 @@ export type CurrentUser = {
   roleName: string;
   clientId: string | null;
   maxDiscountBp: number;
+  /** Palavra-passe temporária: só pode aceder à página de alteração. */
+  mustChangePassword: boolean;
   permissions: ReadonlySet<Permission>;
 };
+
+export const CHANGE_PASSWORD_PATH = "/alterar-palavra-passe";
 
 /**
  * Utilizador da sessão atual, com papel e permissões efetivas lidos da BD
@@ -55,6 +59,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     roleName: user.role.name,
     clientId: user.clientId,
     maxDiscountBp: user.maxDiscountBp,
+    mustChangePassword: user.mustChangePassword,
     permissions,
   };
 });
@@ -63,9 +68,16 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
 // Guardas para páginas (redirecionam) — usar em layouts e páginas.
 // ---------------------------------------------------------------------------
 
-export async function requirePageUser(): Promise<CurrentUser> {
+/** Utilizador com sessão, sem verificar a palavra-passe temporária (só para a página de alteração). */
+export async function requireSessionPage(): Promise<CurrentUser> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  return user;
+}
+
+export async function requirePageUser(): Promise<CurrentUser> {
+  const user = await requireSessionPage();
+  if (user.mustChangePassword) redirect(CHANGE_PASSWORD_PATH);
   return user;
 }
 
@@ -94,6 +106,7 @@ export async function requirePagePermission(permission: Permission): Promise<Cur
 export async function requireUser(): Promise<CurrentUser> {
   const user = await getCurrentUser();
   if (!user) throw new UnauthenticatedError();
+  if (user.mustChangePassword) throw new ForbiddenError("Altere a palavra-passe temporária antes de continuar.");
   return user;
 }
 

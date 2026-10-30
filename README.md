@@ -43,6 +43,13 @@ Palavra-passe de todas: `Magnezya#2026` (definida em `SEED_DEFAULT_PASSWORD` no 
 
 Estas contas existem apenas em desenvolvimento. Nunca executar o seed em produção.
 
+### Novas contas
+
+Os administradores criam contas em **Utilizadores** com uma palavra-passe temporária
+(botão "Gerar"), que deve ser comunicada ao utilizador por um canal seguro. No primeiro
+login, o utilizador é obrigado a definir a sua. O mesmo acontece depois de "Repor palavra-passe".
+Contas do portal de clientes criam-se a partir da ficha do cliente ("Acesso ao portal → Criar").
+
 ## Comandos úteis
 
 | Comando | O que faz |
@@ -81,12 +88,14 @@ tests/unit/       testes (node:test via tsx)
 - Três níveis de proteção: `src/proxy.ts` (sessão) → layouts/páginas (papel) →
   Server Actions e serviços (permissão + filtro por cliente nas queries).
 - Limite de 5 tentativas de login por minuto.
-- Auditoria de logins, logouts e tentativas falhadas (`audit_logs`).
+- Auditoria de logins, logouts, tentativas falhadas e de todas as alterações a clientes e utilizadores (`audit_logs`).
+- Desativar uma conta termina de imediato as suas sessões; nunca pode ficar sem administradores ativos.
+- Arquivar um cliente desativa as contas do portal desse cliente.
 
 ## Estado
 
 - [x] **Fase 1** — estrutura, base de dados, autenticação, permissões, tema claro/escuro, layout
-- [ ] Fase 2 — dashboard, utilizadores e clientes
+- [x] **Fase 2** — dashboard, utilizadores e clientes
 - [ ] Fase 3 — artigos e inventário
 - [ ] Fase 4 — motor de disponibilidade e calendário
 - [ ] Fase 5 — orçamentos

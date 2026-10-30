@@ -270,15 +270,17 @@ async function seedPeople() {
 
   const clients = [
     { name: "Cliente Demo Alfa, Lda.", nif: "500000000", city: "Lisboa", email: "eventos@alfa.example" },
-    { name: "Cliente Demo Beta – Congressos, S.A.", nif: "500000001", city: "Porto", email: "geral@beta.example" },
-    { name: "Cliente Demo Gama Feiras", nif: "500000002", city: "Braga", email: "info@gama.example" },
+    // NIFs fictícios mas com dígito de controlo válido.
+    { name: "Cliente Demo Beta – Congressos, S.A.", nif: "501000003", city: "Porto", email: "geral@beta.example" },
+    { name: "Cliente Demo Gama Feiras", nif: "502000007", city: "Braga", email: "info@gama.example" },
   ];
   const created = [];
   for (const c of clients) {
     const existing = await prisma.client.findFirst({ where: { name: c.name } });
     created.push(
-      existing ??
-        (await prisma.client.create({
+      existing
+        ? await prisma.client.update({ where: { id: existing.id }, data: { nif: c.nif } })
+        : await prisma.client.create({
           data: {
             ...c,
             type: "EMPRESA",
@@ -286,7 +288,7 @@ async function seedPeople() {
             createdById: admin.id,
             contacts: { create: { name: "Contacto Demo", email: c.email, isPrimary: true } },
           },
-        })),
+        }),
     );
   }
 

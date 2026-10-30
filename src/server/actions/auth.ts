@@ -4,10 +4,12 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/server/auth/auth";
 import { prisma } from "@/server/db";
-import { getCurrentUser } from "@/server/auth/session";
+import { CHANGE_PASSWORD_PATH, getCurrentUser } from "@/server/auth/session";
 import { logAudit } from "@/server/services/audit";
 import { clientIp, isLoginThrottled } from "@/server/services/login-throttle";
 import { loginSchema } from "@/lib/validation/auth";
+import { changePasswordSchema } from "@/lib/validation/users";
+import { fieldErrorsOf, formToObject } from "@/lib/validation/common";
 import { homePathFor, isInternalRole, type RoleKey } from "@/lib/permissions";
 
 export type LoginState = {
@@ -52,7 +54,13 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
   // Conta inexistente, inativa ou arquivada → mesma mensagem genérica.
   const user = await prisma.user.findUnique({
     where: { email },
-    select: { id: true, active: true, archivedAt: true, role: { select: { key: true } } },
+    select: {
+      id: true,
+      active: true,
+      archivedAt: true,
+      mustChangePassword: true,
+      role: { select: { key: true } },
+    },
   });
   if (!user || !user.active || user.archivedAt) {
     await logAudit({ actorId: null, action: "auth.login_failed", entity: "User", after: { email } });
@@ -75,6 +83,7 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
   await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
   await logAudit({ actorId: user.id, action: "auth.login", entity: "User", entityId: user.id });
 
+  if (user.mustChangePassword) redirect(CHANGE_PASSWORD_PATH);
   redirect(safeNext(next, user.role.key as RoleKey));
 }
 
@@ -83,4 +92,39 @@ export async function logoutAction(): Promise<void> {
   await auth.api.signOut({ headers: await headers() });
   if (user) await logAudit({ actorId: user.id, action: "auth.logout", entity: "User", entityId: user.id });
   redirect("/login");
+}
+
+export type ChangePasswordState = {
+  error?: string;
+  fieldErrors?: Record<string, string[]>;
+};
+
+/**
+ * Alteração da palavra-passe pelo próprio utilizador (obrigatória quando a
+ * atual é temporária). Termina as outras sessões abertas.
+ */
+export async function changePasswordAction(
+  _prev: ChangePasswordState,
+  formData: FormData,
+): Promise<ChangePasswordState> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const parsed = changePasswordSchema.safeParse(formToObject(formData));
+  if (!parsed.success) return { fieldErrors: fieldErrorsOf(parsed.error) };
+  const { currentPassword, newPassword } = parsed.data;
+
+  try {
+    await auth.api.changePassword({
+      body: { currentPassword, newPassword, revokeOtherSessions: true },
+      headers: await headers(),
+    });
+  } catch {
+    return { fieldErrors: { currentPassword: ["Palavra-passe atual incorreta."] } };
+  }
+
+  await prisma.user.update({ where: { id: user.id }, data: { mustChangePassword: false } });
+  await logAudit({ actorId: user.id, action: "auth.password_changed", entity: "User", entityId: user.id });
+
+  redirect(homePathFor(user.role));
 }

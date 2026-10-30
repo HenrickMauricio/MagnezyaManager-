@@ -36,8 +36,10 @@ export class ConflictError extends AppError {
 
 /** Resultado normalizado das Server Actions (para formulários). */
 export type ActionResult<T = undefined> =
-  | { ok: true; data?: T; message?: string }
+  | { ok: true; data?: T; message?: string; redirectTo?: string }
   | { ok: false; error: string; fieldErrors?: Record<string, string[]> };
+
+export const INVALID_FIELDS = "Verifique os campos assinalados.";
 
 export function toActionError(err: unknown): { ok: false; error: string } {
   if (err instanceof AppError) return { ok: false, error: err.message };

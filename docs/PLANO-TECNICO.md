@@ -421,6 +421,9 @@ Cada fase termina com: fluxos principais testados, documentação atualizada, ne
 | D6 | Aprovação do cliente sem stock: fica registada, a reserva fica em conflito e o vendedor é alertado. |
 | D7 | Alojamento **por decidir**. Independentemente de onde está o programador, os dados têm de ficar **na UE** (RGPD; clientes em Portugal). O projeto é portátil (Docker), a decisão fica para a Fase 8. |
 | D8 | Desenvolvimento na área de trabalho do Claude e sincronização para a pasta; o PC local está a instalar Git, Node.js e Docker. |
+| D9 | Novas contas (e reposições) usam **palavra-passe temporária** definida pelo administrador; o utilizador é obrigado a alterá-la no primeiro login. Convite por email na Fase 6. *(30/10/2026)* |
+| D10 | Só o **administrador** arquiva clientes (permissão `client:delete`, atribuível individualmente). *(30/10/2026)* |
+| D11 | **NIF obrigatório** para empresas e particulares, único por cliente. Em Portugal valida o dígito de controlo; em clientes estrangeiros aceita o identificador fiscal do país. *(30/10/2026)* |
 
 ## 8.1 Questões originais (histórico)
 

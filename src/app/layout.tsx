@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Inter_Tight } from "next/font/google";
 import { cookies } from "next/headers";
 import { THEME_COOKIE, isTheme, themeBootstrapScript } from "@/lib/theme";
+import { Toaster } from "@/components/ui/toast";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
@@ -36,9 +37,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       suppressHydrationWarning
     >
       <head>
+        {/* Sem preferência guardada: segue o tema do sistema antes da primeira pintura.
+            (Em desenvolvimento, a página 404 mostra um aviso inofensivo do React sobre este script.) */}
         {theme === null && <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />}
       </head>
-      <body className="min-h-dvh">{children}</body>
+      <body className="min-h-dvh">
+        {children}
+        <Toaster />
+      </body>
     </html>
   );
 }

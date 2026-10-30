@@ -1,4 +1,5 @@
-import { LogOut } from "lucide-react";
+import Link from "next/link";
+import { KeyRound, LogOut } from "lucide-react";
 import { logoutAction } from "@/server/actions/auth";
 
 function initials(name: string) {
@@ -10,7 +11,18 @@ function initials(name: string) {
     .join("");
 }
 
-export function UserMenu({ name, roleName }: { name: string; roleName: string }) {
+const iconButton =
+  "inline-flex size-9 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg";
+
+export function UserMenu({
+  name,
+  roleName,
+  showPasswordLink = true,
+}: {
+  name: string;
+  roleName: string;
+  showPasswordLink?: boolean;
+}) {
   return (
     <div className="flex items-center gap-3">
       <div className="hidden text-right sm:block">
@@ -23,10 +35,20 @@ export function UserMenu({ name, roleName }: { name: string; roleName: string })
       >
         {initials(name)}
       </div>
+      {showPasswordLink && (
+        <Link
+          href="/alterar-palavra-passe"
+          className={iconButton}
+          aria-label="Alterar palavra-passe"
+          title="Alterar palavra-passe"
+        >
+          <KeyRound className="size-[18px]" strokeWidth={1.75} />
+        </Link>
+      )}
       <form action={logoutAction}>
         <button
           type="submit"
-          className="inline-flex size-9 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
+          className={iconButton}
           aria-label="Terminar sessão"
           title="Terminar sessão"
         >

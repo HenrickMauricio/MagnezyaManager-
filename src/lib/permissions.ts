@@ -9,6 +9,12 @@
 export const ROLE_KEYS = ["ADMIN", "VENDEDOR", "CLIENTE"] as const;
 export type RoleKey = (typeof ROLE_KEYS)[number];
 
+export const ROLE_LABELS: Record<RoleKey, string> = {
+  ADMIN: "Administrador",
+  VENDEDOR: "Vendedor",
+  CLIENTE: "Cliente (portal)",
+};
+
 export const PERMISSIONS = {
   // Painel e relatórios
   "dashboard:view": "Ver o painel interno",

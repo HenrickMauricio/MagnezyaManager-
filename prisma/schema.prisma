@@ -120,6 +120,9 @@ model User {
   maxDiscountBp Int @default(0)
 
   active      Boolean   @default(true)
+  /// Palavra-passe temporária definida por um administrador: tem de ser
+  /// alterada pelo próprio utilizador antes de usar a aplicação.
+  mustChangePassword Boolean @default(false)
   lastLoginAt DateTime?
   archivedAt  DateTime?
 
@@ -248,7 +251,8 @@ model Client {
   id             String     @id @default(cuid())
   type           ClientType @default(EMPRESA)
   name           String
-  nif            String?
+  /// Obrigatório para empresas e particulares; único (evita clientes duplicados).
+  nif            String     @unique
   email          String?
   phone          String?
   billingAddress String?
@@ -275,7 +279,6 @@ model Client {
   rentals     Rental[]
 
   @@index([name])
-  @@index([nif])
   @@map("clients")
 }
 

@@ -17,6 +17,20 @@ const sizes: Record<Size, string> = {
   lg: "h-12 px-5 text-[15px]",
 };
 
+/** Classes do botão — também usadas em links com aspeto de botão. */
+export function buttonClasses({
+  variant = "primary",
+  size = "md",
+  className,
+}: { variant?: Variant; size?: Size; className?: string } = {}) {
+  return cn(
+    "inline-flex select-none items-center justify-center gap-2 rounded-md font-medium transition-[opacity,background-color,transform] duration-150 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50",
+    variants[variant],
+    sizes[size],
+    className,
+  );
+}
+
 export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: Variant;
   size?: Size;
@@ -32,12 +46,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       ref={ref}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
-      className={cn(
-        "inline-flex select-none items-center justify-center gap-2 rounded-md font-medium transition-[opacity,background-color,transform] duration-150 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50",
-        variants[variant],
-        sizes[size],
-        className,
-      )}
+      className={buttonClasses({ variant, size, className })}
       {...props}
     >
       {loading && (
