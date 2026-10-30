@@ -75,3 +75,38 @@ export function parseEurosToCents(input: string): number | null {
   if (!/^-?\d+(\.\d{1,2})?$/.test(normalized)) return null;
   return Math.round(Number(normalized) * 100);
 }
+
+// ---------------------------------------------------------------------------
+// Datas de calendário (sem hora), no formato ISO "aaaa-mm-dd".
+// Os campos @db.Date chegam do Prisma como Date à meia-noite UTC.
+// ---------------------------------------------------------------------------
+
+const isoDateFmt = new Intl.DateTimeFormat("en-CA", { timeZone: TIME_ZONE });
+
+/** Data de hoje em Lisboa, "aaaa-mm-dd". */
+export function todayISO(now: Date = new Date()): string {
+  return isoDateFmt.format(now);
+}
+
+/** Campo @db.Date → "aaaa-mm-dd". */
+export function dateOnlyToISO(value: Date): string {
+  return value.toISOString().slice(0, 10);
+}
+
+/** "aaaa-mm-dd" → Date para gravar num campo @db.Date. */
+export function isoToDateOnly(iso: string): Date {
+  return new Date(`${iso}T00:00:00.000Z`);
+}
+
+/** Soma dias a uma data "aaaa-mm-dd". */
+export function addDaysISO(iso: string, days: number): string {
+  const d = isoToDateOnly(iso);
+  d.setUTCDate(d.getUTCDate() + days);
+  return dateOnlyToISO(d);
+}
+
+/** "aaaa-mm-dd" → "dd/mm/aaaa". */
+export function formatISODate(iso: string): string {
+  const [y, m, d] = iso.split("-");
+  return `${d}/${m}/${y}`;
+}

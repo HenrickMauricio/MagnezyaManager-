@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "@/server/db";
 import { assertPermission, type CurrentUser } from "@/server/auth/session";
+import { getMaintenanceSummary } from "@/server/services/inventory";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -29,6 +30,7 @@ export async function getDashboardOverview(user: CurrentUser) {
     users,
     recentClients,
     recentActivity,
+    maintenance,
   ] = await Promise.all([
     prisma.article.count({ where: activeArticle }),
     prisma.article.aggregate({ where: activeArticle, _sum: { stockBase: true } }),
@@ -62,6 +64,7 @@ export async function getDashboardOverview(user: CurrentUser) {
           include: { actor: { select: { name: true } } },
         })
       : Promise.resolve(null),
+    getMaintenanceSummary(),
   ]);
 
   return {
@@ -74,6 +77,7 @@ export async function getDashboardOverview(user: CurrentUser) {
     users,
     recentClients,
     recentActivity,
+    maintenance,
   };
 }
 
@@ -96,6 +100,22 @@ const ACTION_LABELS: Record<string, string> = {
   "user.deactivate": "Desativou uma conta",
   "user.password_reset": "Repôs uma palavra-passe",
   "user.permissions": "Alterou permissões",
+  "category.create": "Criou uma categoria",
+  "category.update": "Editou uma categoria",
+  "category.archive": "Arquivou uma categoria",
+  "category.restore": "Restaurou uma categoria",
+  "article.create": "Criou um artigo",
+  "article.update": "Editou um artigo",
+  "article.archive": "Arquivou um artigo",
+  "article.restore": "Restaurou um artigo",
+  "article.image_add": "Adicionou uma fotografia",
+  "article.image_primary": "Mudou a fotografia principal",
+  "article.image_delete": "Eliminou uma fotografia",
+  "movement.create": "Registou um movimento de stock",
+  "maintenance.create": "Registou uma manutenção",
+  "maintenance.start": "Iniciou uma reparação",
+  "maintenance.complete": "Concluiu uma manutenção",
+  "maintenance.cancel": "Anulou uma manutenção",
 };
 
 export function describeAction(action: string): string {
@@ -107,5 +127,7 @@ export function auditTargetHref(entity: string, entityId: string | null): string
   if (!entityId) return null;
   if (entity === "Client") return `/clientes/${entityId}`;
   if (entity === "User") return `/utilizadores/${entityId}`;
+  if (entity === "Article") return `/artigos/${entityId}`;
+  if (entity === "Category") return "/categorias";
   return null;
 }

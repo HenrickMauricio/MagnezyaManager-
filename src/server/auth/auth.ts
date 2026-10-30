@@ -3,6 +3,7 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
 import { prisma } from "@/server/db";
+import { BRAND } from "@/config/brand";
 
 /**
  * Configuração do Better Auth.
@@ -13,7 +14,7 @@ import { prisma } from "@/server/db";
  *   (bloqueado no hook de criação de sessão, além da verificação no login).
  */
 export const auth = betterAuth({
-  appName: "Magnezya",
+  appName: BRAND.name,
   database: prismaAdapter(prisma, { provider: "postgresql" }),
   emailAndPassword: {
     enabled: true,

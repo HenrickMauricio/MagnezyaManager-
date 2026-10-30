@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { HTMLAttributes, ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
@@ -27,25 +28,37 @@ export function CardHeader({
   );
 }
 
+/** Cartão de indicador. Com `href`, o cartão inteiro é um link para a página respetiva. */
 export function StatCard({
   label,
   value,
   hint,
   icon,
+  href,
 }: {
   label: string;
   value: ReactNode;
   hint?: ReactNode;
   icon?: ReactNode;
+  href?: string;
 }) {
-  return (
-    <Card className="animate-fade-in p-5">
+  const content = (
+    <>
       <div className="flex items-center justify-between text-fg-muted">
         <span className="text-[13px] font-medium">{label}</span>
         {icon}
       </div>
       <div className="tabular mt-3 font-display text-[32px] font-semibold leading-none tracking-tight">{value}</div>
       {hint && <div className="mt-2 text-[12px] text-fg-subtle">{hint}</div>}
-    </Card>
+    </>
+  );
+  if (!href) return <Card className="animate-fade-in p-5">{content}</Card>;
+  return (
+    <Link
+      href={href}
+      className="animate-fade-in block rounded-lg border border-border bg-surface p-5 transition-colors hover:border-border-strong hover:bg-surface-2/60"
+    >
+      {content}
+    </Link>
   );
 }

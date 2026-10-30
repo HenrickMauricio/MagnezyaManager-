@@ -425,6 +425,33 @@ Cada fase termina com: fluxos principais testados, documentação atualizada, ne
 | D10 | Só o **administrador** arquiva clientes (permissão `client:delete`, atribuível individualmente). *(30/10/2026)* |
 | D11 | **NIF obrigatório** para empresas e particulares, único por cliente. Em Portugal valida o dígito de controlo; em clientes estrangeiros aceita o identificador fiscal do país. *(30/10/2026)* |
 
+### 8.2 Decisões técnicas da Fase 3 (30/10/2026)
+
+| # | Decisão |
+|---|---|
+| T1 | **Stock inicial imutável.** `stockBase` define-se ao criar o artigo; depois o stock só muda por movimentos (ENTRADA, ABATE, AJUSTE) auditados. |
+| T2 | **SKU automático provisório:** prefixo da categoria + número sequencial (`CAD-0001`), sempre editável. *A confirmar com a Magnezya se já usam códigos próprios.* |
+| T3 | **Manutenção:** ocupa stock desde o início até ao dia anterior à conclusão. Ao concluir, as unidades reparadas voltam e as perdidas saem por um ABATE ligado à manutenção. O motor de disponibilidade (Fase 4) segue a mesma convenção. |
+| T4 | **Concorrência no stock:** movimentos e manutenções bloqueiam a linha do artigo (`SELECT … FOR UPDATE`) e validam o stock em todas as datas afetadas. |
+| T5 | **Fotografias em disco local** (`STORAGE_DIR`) atrás de uma interface de armazenamento; o driver S3/R2 na UE entra quando o alojamento for decidido (D7). |
+
+**Pendente da Fase 3:** importador de planilhas CSV/Excel com modelo próprio (ver §8.3).
+
+### 8.3 Mudança de rumo (30/10/2026)
+
+A Magnezya desistiu do sistema. O projeto continua como **produto próprio**, para vender a outras empresas de aluguer.
+
+| # | Decisão |
+|---|---|
+| P1 | **Uma instalação por empresa cliente** (base de dados e marca próprias), não SaaS multiempresa. A arquitetura atual mantém-se. |
+| P2 | **Mercado: Portugal** (euro, IVA, NIF, português de Portugal). |
+| P3 | A **marca Magnezya** (nome, logótipo, imagens) pode ser usada no projeto, com autorização da empresa, como marca e catálogo de demonstração. |
+| P4 | **Marca configurável** por instalação (`src/config/brand.ts`, variáveis `NEXT_PUBLIC_BRAND_*`). Nada específico de uma empresa fica fixo no código. |
+| P5 | **Catálogo de demonstração real:** 264 peças de magnezya.pt em 12 categorias, com stock e preços fictícios e estáveis (`prisma/data/catalogo-magnezya.json`, gerado por `scripts/catalogo-magnezya.ts`). |
+| P6 | **SKU:** prefixo da categoria + número (`CAD-0001` nos artigos novos; `CAD-8315` no catálogo importado, com o nº do produto na loja). Decisão resolvida, deixa de depender da Magnezya. |
+| P7 | **Importador de planilhas** com um modelo próprio descarregável, em vez da planilha de um cliente concreto. |
+| P8 | **Conjuntos/kits** (171 "sets" do catálogo: ex. sofá + 2 poltronas + mesa) como funcionalidade nova: um conjunto é composto por peças e ocupa o stock delas. Entra depois do motor de disponibilidade (Fase 4). Os conjuntos já estão guardados no ficheiro do catálogo. |
+
 ## 8.1 Questões originais (histórico)
 
 **D1 — Modelo de preço.** O preço de aluguer é (a) por evento/período (ex.: até 3 dias), (b) por dia, ou (c) degressivo (1.º dia preço total, dias seguintes com desconto)? *Proposta:* suportar (a) e (b) por artigo, com (c) como regra opcional.

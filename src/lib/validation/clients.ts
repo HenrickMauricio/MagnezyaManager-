@@ -2,7 +2,7 @@ import { z } from "zod";
 import { isPlausibleForeignTaxId, isValidPortugueseNif, normalizeTaxId } from "@/lib/nif";
 import { checkbox, optionalEmail, optionalPhone, optionalText, requiredText } from "./common";
 
-/** Países mais comuns nos clientes da Magnezya (ISO 3166-1 alfa-2). */
+/** Países mais comuns nos clientes de empresas de aluguer em Portugal (ISO 3166-1 alfa-2). */
 export const COUNTRIES = {
   PT: "Portugal",
   ES: "Espanha",

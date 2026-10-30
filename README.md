@@ -3,6 +3,10 @@
 Plataforma de gestão de aluguer de mobiliário e equipamentos para eventos:
 inventário, disponibilidade, reservas, orçamentos e portal do cliente.
 
+Projeto próprio, pensado para ser vendido a empresas de aluguer em Portugal
+(**uma instalação por empresa**, com a marca de cada uma). A marca e o catálogo
+de demonstração são da Magnezya, usados com autorização.
+
 Plano técnico e decisões: [`docs/PLANO-TECNICO.md`](docs/PLANO-TECNICO.md)
 
 ## Requisitos
@@ -21,7 +25,8 @@ cd "C:\Users\Henrick\Desktop\MAGNEZYA PROJECT"
 npm install                              # dependências (+ gera o cliente Prisma)
 npm run db:up                            # arranca o PostgreSQL no Docker (porta 5433)
 npx prisma migrate dev --name init       # cria as tabelas
-npm run db:seed                          # dados de demonstração
+npm run db:seed                          # dados de demonstração (catálogo Magnezya)
+npm run catalogo:imagens                 # opcional: fotografias do catálogo (~1 min, 55 MB)
 npm test                                 # testes unitários
 npm run dev                              # http://localhost:3000
 ```
@@ -64,6 +69,24 @@ Contas do portal de clientes criam-se a partir da ficha do cliente ("Acesso ao p
 | `npm run db:seed` | Repor dados de demonstração (idempotente) |
 | `npm run db:reset` | **Apaga** a base de dados local e volta a criar tudo |
 | `npm run db:studio` | Explorar a base de dados no browser |
+| `npm run catalogo:importar` | Atualizar `prisma/data/catalogo-magnezya.json` a partir de magnezya.pt |
+| `npm run catalogo:imagens` | Descarregar as fotografias do catálogo (só artigos sem fotografias) |
+
+## Marca (white-label)
+
+O nome e o subtítulo da marca vêm de `src/config/brand.ts` e mudam por instalação, no `.env`,
+antes do build:
+
+```
+NEXT_PUBLIC_BRAND_NAME="Nome da Empresa"
+NEXT_PUBLIC_BRAND_TAGLINE="Aluguer para eventos"
+NEXT_PUBLIC_BRAND_SEGMENTS="Casamentos,Empresas,Feiras"
+NEXT_PUBLIC_BRAND_HEADLINE="Frase principal da página de login"
+NEXT_PUBLIC_BRAND_DESCRIPTION="Texto de apoio da página de login"
+```
+
+Sem estas variáveis, usa a marca de demonstração (Magnezya). Os dados legais e o logótipo para as
+propostas ficarão nas Definições da empresa (Fase 5).
 
 ## Arquitetura (resumo)
 
@@ -91,12 +114,24 @@ tests/unit/       testes (node:test via tsx)
 - Auditoria de logins, logouts, tentativas falhadas e de todas as alterações a clientes e utilizadores (`audit_logs`).
 - Desativar uma conta termina de imediato as suas sessões; nunca pode ficar sem administradores ativos.
 - Arquivar um cliente desativa as contas do portal desse cliente.
+- Fotografias servidas apenas a utilizadores com sessão e permissão (`/api/ficheiros/...`);
+  metadados (ex.: localização GPS) removidos no carregamento.
+
+### Catálogo e stock
+
+- O stock de um artigo = **stock inicial** (definido ao criar) **+ movimentos** (entrada, abate,
+  ajuste). O stock nunca se edita diretamente; cada movimento fica registado com motivo, data e autor.
+- Unidades em **manutenção** deixam de contar como disponíveis até a manutenção ser concluída; as
+  unidades perdidas são abatidas automaticamente.
+- O sistema recusa movimentos que deixariam o stock negativo ou abaixo das unidades em manutenção.
+- Fotografias: reduzidas para WebP (máx. 1600 px + miniatura) e guardadas em `STORAGE_DIR`
+  (pasta `storage/`, fora do Git). Em produção passará a S3/R2 na UE (Fase 8).
 
 ## Estado
 
 - [x] **Fase 1** — estrutura, base de dados, autenticação, permissões, tema claro/escuro, layout
 - [x] **Fase 2** — dashboard, utilizadores e clientes
-- [ ] Fase 3 — artigos e inventário
+- [~] **Fase 3** — artigos e inventário *(falta o importador de planilhas CSV/Excel)*
 - [ ] Fase 4 — motor de disponibilidade e calendário
 - [ ] Fase 5 — orçamentos
 - [ ] Fase 6 — PDF e email

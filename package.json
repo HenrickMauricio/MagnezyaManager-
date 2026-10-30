@@ -19,6 +19,8 @@
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset",
     "db:studio": "prisma studio",
+    "catalogo:importar": "tsx scripts/catalogo-magnezya.ts",
+    "catalogo:imagens": "tsx scripts/catalogo-imagens.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -33,6 +35,7 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "server-only": "^0.0.1",
+    "sharp": "^0.34.5",
     "tailwind-merge": "^3.3.0",
     "zod": "^4.1.0"
   },

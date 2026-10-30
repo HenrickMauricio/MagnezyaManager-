@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Plus, Users } from "lucide-react";
 import { requirePagePermission } from "@/server/auth/session";
+import { BRAND } from "@/config/brand";
 import { listClients } from "@/server/services/clients";
 import { ListFilters } from "@/components/list-filters";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +27,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
     <div className="mx-auto max-w-7xl space-y-6">
       <PageHeader
         title="Clientes"
-        description="Empresas e particulares a quem a Magnezya aluga material."
+        description={`Empresas e particulares a quem a ${BRAND.name} aluga material.`}
         actions={
           canCreate && (
             <Link href="/clientes/novo" className={buttonClasses()}>

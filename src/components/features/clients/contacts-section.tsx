@@ -10,6 +10,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { ConfirmButton, Dialog } from "@/components/ui/dialog";
 import { Checkbox, Field, Input } from "@/components/ui/field";
 import { EmptyState } from "@/components/ui/page";
+import { BRAND } from "@/config/brand";
 
 export type ContactView = {
   id: string;
@@ -37,7 +38,7 @@ export function ContactsSection({
     <Card>
       <CardHeader
         title="Contactos"
-        description="Pessoas com quem a Magnezya fala neste cliente."
+        description={`Pessoas com quem a ${BRAND.name} fala neste cliente.`}
         action={
           canEdit && (
             <Button size="sm" variant="secondary" onClick={() => setEditing("new")}>

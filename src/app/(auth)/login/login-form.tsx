@@ -5,6 +5,7 @@ import { ArrowRight } from "lucide-react";
 import { loginAction, type LoginState } from "@/server/actions/auth";
 import { Button } from "@/components/ui/button";
 import { FieldError, Input, Label } from "@/components/ui/field";
+import { BRAND } from "@/config/brand";
 
 export function LoginForm({ next }: { next?: string }) {
   const [state, action, pending] = useActionState<LoginState, FormData>(loginAction, {});
@@ -56,7 +57,7 @@ export function LoginForm({ next }: { next?: string }) {
       </Button>
 
       <p className="text-center text-[13px] text-fg-subtle">
-        Esqueceu-se da palavra-passe? Contacte o administrador da Magnezya.
+        Esqueceu-se da palavra-passe? Contacte o administrador da {BRAND.name}.
       </p>
     </form>
   );

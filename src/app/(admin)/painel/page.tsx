@@ -6,6 +6,7 @@ import { auditTargetHref, describeAction, getDashboardOverview } from "@/server/
 import { Card, CardHeader, StatCard } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatDate, formatDateLong, formatDateTime, formatInteger } from "@/lib/format";
+import type { Permission } from "@/lib/permissions";
 
 export const metadata: Metadata = { title: "Painel" };
 
@@ -15,10 +16,13 @@ export default async function DashboardPage() {
   const user = await requirePagePermission("dashboard:view");
   const data = await getDashboardOverview(user);
   const firstName = user.name.split(" ")[0];
+  const can = (permission: Permission) => user.permissions.has(permission);
   const canOpen = (href: string | null) =>
     href !== null &&
     ((href.startsWith("/clientes") && user.permissions.has("client:view")) ||
-      (href.startsWith("/utilizadores") && user.permissions.has("user:manage")));
+      (href.startsWith("/utilizadores") && user.permissions.has("user:manage")) ||
+      (href.startsWith("/artigos") && user.permissions.has("article:view")) ||
+      (href.startsWith("/categorias") && user.permissions.has("category:manage")));
 
   return (
     <div className="mx-auto max-w-7xl space-y-8">
@@ -30,6 +34,7 @@ export default async function DashboardPage() {
       <section aria-label="Indicadores" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <StatCard
           label="Clientes ativos"
+          href={can("client:view") ? "/clientes" : undefined}
           value={formatInteger(data.clients)}
           hint={`${formatInteger(data.newClients)} novos nos últimos 30 dias`}
           icon={<Users {...iconProps} />}
@@ -49,16 +54,27 @@ export default async function DashboardPage() {
             icon={<FileText {...iconProps} />}
           />
         )}
-        <StatCard label="Artigos ativos" value={formatInteger(data.articles)} icon={<Package {...iconProps} />} />
+        <StatCard
+          label="Artigos ativos"
+          href={can("article:view") ? "/artigos" : undefined}
+          value={formatInteger(data.articles)}
+          icon={<Package {...iconProps} />}
+        />
         <StatCard
           label="Unidades em stock"
+          href={can("inventory:manage") ? "/inventario" : can("article:view") ? "/artigos" : undefined}
           value={formatInteger(data.units)}
-          hint="Stock total, antes de reservas"
+          hint={
+            data.maintenance.units > 0
+              ? `${formatInteger(data.maintenance.units)} em manutenção (${formatInteger(data.maintenance.articles)} ${data.maintenance.articles === 1 ? "artigo" : "artigos"})`
+              : "Nenhuma unidade em manutenção"
+          }
           icon={<Boxes {...iconProps} />}
         />
         {data.users && (
           <StatCard
             label="Equipa ativa"
+            href="/utilizadores"
             value={formatInteger(data.users.internal)}
             hint={
               `${formatInteger(data.users.portal)} contas no portal` +

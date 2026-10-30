@@ -9,24 +9,20 @@
  * Pode ser executado várias vezes: usa upsert em tudo.
  */
 import "dotenv/config";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { hashPassword } from "better-auth/crypto";
 import { PrismaClient, type RoleKey } from "../src/generated/prisma/client";
 import { PERMISSIONS, ROLE_DEFAULT_PERMISSIONS } from "../src/lib/permissions";
+import { slugify } from "../src/lib/slug";
+import { CATALOG_CATEGORIES, type CatalogData } from "./data/catalog-types";
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
 });
 
 const DEFAULT_PASSWORD = process.env.SEED_DEFAULT_PASSWORD ?? "Magnezya#2026";
-
-const slugify = (s: string) =>
-  s
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
 
 async function seedPermissionsAndRoles() {
   for (const [key, description] of Object.entries(PERMISSIONS)) {
@@ -102,117 +98,87 @@ async function seedCompany(defaultTaxRateId: string) {
   });
 }
 
-/** Catálogo inspirado em magnezya.pt — preços por dia FICTÍCIOS. */
-const CATALOG: { category: string; buffer?: number; items: [sku: string, name: string, priceCents: number, stock: number][] }[] = [
-  {
-    category: "Cadeiras",
-    items: [
-      ["CAD-CONG-PT", "Cadeira de congresso preta", 250, 600],
-      ["CAD-DOBR-BR", "Cadeira dobrável branca", 200, 400],
-      ["CAD-CHIA-DO", "Cadeira Chiavari dourada", 450, 200],
-      ["CAD-TIFF-TR", "Cadeira Tiffany transparente", 550, 150],
-      ["CAD-NORD-BR", "Cadeira nórdica branca", 400, 120],
-      ["CAD-DSW-PT", "Cadeira DSW preta", 450, 100],
-    ],
-  },
-  {
-    category: "Mesas",
-    items: [
-      ["MES-BIST-PT", "Mesa bistro preta Ø60", 900, 60],
-      ["MES-ALTA-BR", "Mesa alta branca Ø70", 1200, 80],
-      ["MES-RED-180", "Mesa redonda Ø180 (10 pax)", 1500, 50],
-      ["MES-RET-180", "Mesa retangular 180×80", 1200, 70],
-      ["MES-CUBO-BR", "Mesa cubo branca", 1500, 30],
-    ],
-  },
-  {
-    category: "Sofás e poltronas",
-    buffer: 1,
-    items: [
-      ["SOF-CHES-PT", "Sofá Chesterfield preto 3 lugares", 9500, 12],
-      ["SOF-NAPA-BR", "Sofá napa branco 2 lugares", 6500, 16],
-      ["POL-BARC-PT", "Poltrona Barcelona preta", 5500, 20],
-      ["POL-TULI-BR", "Poltrona Tulipa branca", 4500, 18],
-    ],
-  },
-  {
-    category: "Bancos e banquetas",
-    items: [
-      ["BAN-ALTO-BR", "Banco alto branco", 650, 120],
-      ["BAN-ACRI-TR", "Banco alto acrílico", 900, 60],
-      ["BAN-LED-CUB", "Banco cubo LED", 1800, 40],
-    ],
-  },
-  {
-    category: "Balcões e bares",
-    buffer: 1,
-    items: [
-      ["BAL-CURV-LED", "Balcão curvo iluminado LED", 9500, 8],
-      ["BAL-RETO-LED", "Balcão reto iluminado LED", 8000, 10],
-      ["BAL-LYCR-BR", "Balcão em lycra branco", 4500, 12],
-    ],
-  },
-  {
-    category: "Iluminação e decoração",
-    items: [
-      ["DEC-ESF-LED", "Esfera LED Ø60", 2500, 20],
-      ["DEC-CIL-LED", "Cilindro LED", 2200, 16],
-      ["DEC-CAND-PE", "Candeeiro de pé", 1800, 24],
-      ["DEC-ESP-GR", "Espelho decorativo grande", 3500, 6],
-    ],
-  },
-  {
-    category: "Palcos e estruturas",
-    buffer: 1,
-    items: [
-      ["EST-ESTR-2X1", "Estrado modular 2×1 m", 3000, 40],
-      ["EST-PULP-AC", "Púlpito acrílico", 7500, 4],
-      ["EST-BARR-SG", "Barreira de segurança", 800, 100],
-      ["EST-BIOM-BR", "Biombo branco", 1500, 30],
-    ],
-  },
-  {
-    category: "Exterior e diversos",
-    items: [
-      ["DIV-TEND-3X3", "Tenda pop-up 3×3 m", 9000, 10],
-      ["DIV-AQUE-EX", "Aquecedor de exterior", 4500, 15],
-      ["DIV-PUFF-BR", "Puff branco", 800, 40],
-      ["DIV-FLIP-CH", "Flip chart", 1500, 12],
-    ],
-  },
+/**
+ * Catálogo real da Magnezya (magnezya.pt, uso autorizado), gerado por
+ * scripts/catalogo-magnezya.ts. Stock e preços são FICTÍCIOS mas estáveis:
+ * derivados do id do produto, dentro de intervalos realistas por categoria.
+ */
+const catalog = JSON.parse(
+  readFileSync(path.join(import.meta.dirname, "data", "catalogo-magnezya.json"), "utf8"),
+) as CatalogData;
+
+/** SKUs do catálogo fictício inicial (substituído pelo catálogo real). */
+const LEGACY_SKUS = [
+  "CAD-CONG-PT", "CAD-DOBR-BR", "CAD-CHIA-DO", "CAD-TIFF-TR", "CAD-NORD-BR", "CAD-DSW-PT",
+  "MES-BIST-PT", "MES-ALTA-BR", "MES-RED-180", "MES-RET-180", "MES-CUBO-BR",
+  "SOF-CHES-PT", "SOF-NAPA-BR", "POL-BARC-PT", "POL-TULI-BR",
+  "BAN-ALTO-BR", "BAN-ACRI-TR", "BAN-LED-CUB",
+  "BAL-CURV-LED", "BAL-RETO-LED", "BAL-LYCR-BR",
+  "DEC-ESF-LED", "DEC-CIL-LED", "DEC-CAND-PE", "DEC-ESP-GR",
+  "EST-ESTR-2X1", "EST-PULP-AC", "EST-BARR-SG", "EST-BIOM-BR",
+  "DIV-TEND-3X3", "DIV-AQUE-EX", "DIV-PUFF-BR", "DIV-FLIP-CH",
 ];
 
+/** Número pseudoaleatório estável em [0, 1) a partir de um inteiro (mulberry32). */
+function stableRandom(seed: number): number {
+  let t = (seed + 0x6d2b79f5) | 0;
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+
+function fictitiousStock(id: number, [min, max]: readonly [number, number]): number {
+  const raw = min + stableRandom(id) * (max - min);
+  const step = max > 100 ? 10 : max > 30 ? 5 : 1;
+  return Math.max(min, Math.round(raw / step) * step);
+}
+
+function fictitiousPriceCents(id: number, [min, max]: readonly [number, number]): number {
+  const euros = min + stableRandom(id * 7919) * (max - min);
+  return Math.round(euros * 2) * 50; // múltiplos de 0,50 €
+}
+
 async function seedCatalog(taxRateId: string) {
-  let order = 0;
-  for (const block of CATALOG) {
+  const categoryIds = new Map<string, string>();
+  for (const [order, c] of CATALOG_CATEGORIES.entries()) {
+    const data = { name: c.name, slug: slugify(c.name), sortOrder: order, prepBufferDays: c.buffer, archivedAt: null };
     const category = await prisma.category.upsert({
-      where: { slug: slugify(block.category) },
-      update: { name: block.category, sortOrder: order, prepBufferDays: block.buffer ?? 0 },
+      where: { skuPrefix: c.prefix },
+      update: data,
+      create: { ...data, skuPrefix: c.prefix },
+    });
+    categoryIds.set(c.prefix, category.id);
+  }
+
+  for (const item of catalog.items) {
+    const category = CATALOG_CATEGORIES.find((c) => c.prefix === item.category)!;
+    const content = { name: item.name, description: item.description, categoryId: categoryIds.get(item.category)! };
+    await prisma.article.upsert({
+      where: { sku: item.sku },
+      // Reimportar atualiza textos e categoria, mas nunca o stock (só muda por movimentos).
+      update: content,
       create: {
-        name: block.category,
-        slug: slugify(block.category),
-        sortOrder: order,
-        prepBufferDays: block.buffer ?? 0,
+        ...content,
+        sku: item.sku,
+        priceCents: fictitiousPriceCents(item.sourceId, category.price),
+        priceUnit: "POR_DIA",
+        taxRateId,
+        stockBase: fictitiousStock(item.sourceId, category.stock),
+        unit: "un",
       },
     });
-    order += 1;
+  }
 
-    for (const [sku, name, priceCents, stock] of block.items) {
-      await prisma.article.upsert({
-        where: { sku },
-        update: {},
-        create: {
-          sku,
-          name,
-          categoryId: category.id,
-          priceCents,
-          priceUnit: "POR_DIA",
-          taxRateId,
-          stockBase: stock,
-          unit: "un",
-        },
-      });
-    }
+  // Remove os artigos do catálogo fictício inicial; os que já têm histórico ficam arquivados.
+  for (const sku of LEGACY_SKUS) {
+    const legacy = await prisma.article.findUnique({
+      where: { sku },
+      include: { _count: { select: { movements: true, maintenances: true, images: true, quoteItems: true, rentalItems: true } } },
+    });
+    if (!legacy) continue;
+    const used = Object.values(legacy._count).some((n) => n > 0);
+    if (used) await prisma.article.update({ where: { id: legacy.id }, data: { archivedAt: legacy.archivedAt ?? new Date() } });
+    else await prisma.article.delete({ where: { id: legacy.id } });
   }
 
   const services = [

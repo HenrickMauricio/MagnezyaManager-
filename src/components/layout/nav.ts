@@ -52,9 +52,9 @@ export const NAV: NavGroup[] = [
   {
     label: "Catálogo",
     items: [
-      { label: "Artigos", href: "/artigos", icon: "articles", permission: "article:view", availableInPhase: 3 },
-      { label: "Categorias", href: "/categorias", icon: "categories", permission: "category:manage", availableInPhase: 3 },
-      { label: "Inventário", href: "/inventario", icon: "inventory", permission: "inventory:manage", availableInPhase: 3 },
+      { label: "Artigos", href: "/artigos", icon: "articles", permission: "article:view" },
+      { label: "Categorias", href: "/categorias", icon: "categories", permission: "category:manage" },
+      { label: "Inventário", href: "/inventario", icon: "inventory", permission: "inventory:manage" },
     ],
   },
   {

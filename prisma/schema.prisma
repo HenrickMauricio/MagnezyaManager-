@@ -306,6 +306,8 @@ model Category {
   id             String    @id @default(cuid())
   name           String    @unique
   slug           String    @unique
+  /// Prefixo dos SKUs gerados automaticamente (ex.: "CAD" → CAD-0001).
+  skuPrefix      String    @unique
   description    String?
   sortOrder      Int       @default(0)
   /// Dias de preparação/limpeza após recolha em que o artigo continua ocupado.

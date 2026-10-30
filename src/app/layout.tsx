@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Inter_Tight } from "next/font/google";
 import { cookies } from "next/headers";
 import { THEME_COOKIE, isTheme, themeBootstrapScript } from "@/lib/theme";
+import { BRAND } from "@/config/brand";
 import { Toaster } from "@/components/ui/toast";
 import "./globals.css";
 
@@ -14,7 +15,7 @@ const interTight = Inter_Tight({
 });
 
 export const metadata: Metadata = {
-  title: { default: "Magnezya", template: "%s · Magnezya" },
+  title: { default: BRAND.name, template: `%s · ${BRAND.name}` },
   description: "Gestão de aluguer de mobiliário e equipamentos para eventos.",
   robots: { index: false, follow: false },
 };
