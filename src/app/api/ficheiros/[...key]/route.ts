@@ -10,8 +10,13 @@ export async function GET(_request: Request, { params }: RouteContext<"/api/fich
   if (!user || user.mustChangePassword) return new Response("Sessão necessária.", { status: 401 });
 
   const key = (await params).key.join("/");
-  if (!isValidStorageKey(key) || !key.startsWith("articles/")) return new Response(null, { status: 404 });
-  if (!user.permissions.has("article:view")) return new Response(null, { status: 403 });
+  if (!isValidStorageKey(key)) return new Response(null, { status: 404 });
+  // Fotografias de artigos: equipa interna. Logótipo da empresa: qualquer sessão.
+  if (key.startsWith("articles/")) {
+    if (!user.permissions.has("article:view")) return new Response(null, { status: 403 });
+  } else if (!key.startsWith("branding/")) {
+    return new Response(null, { status: 404 });
+  }
 
   const data = await getObject(key);
   if (!data) return new Response(null, { status: 404 });

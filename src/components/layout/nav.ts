@@ -37,7 +37,7 @@ export const NAV: NavGroup[] = [
   {
     label: "Comercial",
     items: [
-      { label: "Orçamentos", href: "/orcamentos", icon: "quotes", permission: "quote:view", availableInPhase: 5 },
+      { label: "Orçamentos", href: "/orcamentos", icon: "quotes", permission: "quote:view" },
       { label: "Clientes", href: "/clientes", icon: "clients", permission: "client:view" },
     ],
   },
@@ -62,7 +62,7 @@ export const NAV: NavGroup[] = [
     items: [
       { label: "Utilizadores", href: "/utilizadores", icon: "users", permission: "user:manage" },
       { label: "Relatórios", href: "/relatorios", icon: "reports", permission: "report:view", availableInPhase: 8 },
-      { label: "Definições", href: "/definicoes", icon: "settings", permission: "settings:manage", availableInPhase: 5 },
+      { label: "Definições", href: "/definicoes", icon: "settings", permission: "settings:manage" },
     ],
   },
 ];

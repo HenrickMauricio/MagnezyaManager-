@@ -27,7 +27,9 @@ export default async function DashboardPage() {
       (href.startsWith("/utilizadores") && user.permissions.has("user:manage")) ||
       (href.startsWith("/artigos") && user.permissions.has("article:view")) ||
       (href.startsWith("/categorias") && user.permissions.has("category:manage")) ||
-      (href.startsWith("/reservas") && user.permissions.has("rental:view")));
+      (href.startsWith("/reservas") && user.permissions.has("rental:view")) ||
+      (href.startsWith("/orcamentos") && user.permissions.has("quote:view")) ||
+      (href.startsWith("/definicoes") && user.permissions.has("settings:manage")));
 
   return (
     <div className="mx-auto max-w-7xl space-y-8">
@@ -46,16 +48,18 @@ export default async function DashboardPage() {
         />
         {data.users ? (
           <StatCard
-            label="Orçamentos"
+            label="Orçamentos em aberto"
+            href={can("quote:view") ? (data.awaitingApproval ? "/orcamentos?estado=AGUARDANDO_APROVACAO" : "/orcamentos") : undefined}
             value={formatInteger(data.quotes)}
-            hint="Módulo ativo na fase 5"
+            hint={data.awaitingApproval ? `${formatInteger(data.awaitingApproval)} a aguardar aprovação de desconto` : "Rascunhos e propostas emitidas"}
             icon={<FileText {...iconProps} />}
           />
         ) : (
           <StatCard
             label="Os meus orçamentos"
+            href={can("quote:view") ? "/orcamentos?autor=meus" : undefined}
             value={formatInteger(data.myQuotes)}
-            hint={`${formatInteger(data.quotes)} no total`}
+            hint={`em aberto · ${formatInteger(data.quotes)} da equipa`}
             icon={<FileText {...iconProps} />}
           />
         )}

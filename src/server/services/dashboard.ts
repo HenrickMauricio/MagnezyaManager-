@@ -9,7 +9,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * Indicadores do painel, adaptados ao perfil:
  * - administrador: visão global, utilizadores e auditoria;
  * - vendedor: os seus orçamentos e clientes.
- * Os indicadores de alugueres e disponibilidade entram na Fase 4.
+ * A operação (entregas, recolhas, atrasos) vem de services/rentals.
  */
 export async function getDashboardOverview(user: CurrentUser) {
   assertPermission(user, "dashboard:view");
@@ -27,6 +27,7 @@ export async function getDashboardOverview(user: CurrentUser) {
     newClients,
     quotes,
     myQuotes,
+    awaitingApproval,
     users,
     recentClients,
     recentActivity,
@@ -40,8 +41,9 @@ export async function getDashboardOverview(user: CurrentUser) {
     }),
     prisma.client.count({ where: { archivedAt: null } }),
     prisma.client.count({ where: { archivedAt: null, createdAt: { gte: since30Days } } }),
-    prisma.quote.count(),
-    prisma.quote.count({ where: { createdById: user.id } }),
+    prisma.quote.count({ where: { status: { in: ["RASCUNHO", "AGUARDANDO_APROVACAO", "ENVIADO"] } } }),
+    prisma.quote.count({ where: { createdById: user.id, status: { in: ["RASCUNHO", "AGUARDANDO_APROVACAO", "ENVIADO"] } } }),
+    prisma.quote.count({ where: { status: "AGUARDANDO_APROVACAO" } }),
     isManager
       ? Promise.all([
           prisma.user.count({ where: { active: true, archivedAt: null, role: { key: { not: "CLIENTE" } } } }),
@@ -74,6 +76,7 @@ export async function getDashboardOverview(user: CurrentUser) {
     newClients,
     quotes,
     myQuotes,
+    awaitingApproval,
     users,
     recentClients,
     recentActivity,
@@ -121,6 +124,19 @@ const ACTION_LABELS: Record<string, string> = {
   "rental.deliver": "Registou uma entrega",
   "rental.return": "Registou uma devolução",
   "rental.cancel": "Cancelou uma reserva",
+  "quote.create": "Criou um orçamento",
+  "quote.update": "Editou um orçamento",
+  "quote.issue": "Emitiu um orçamento",
+  "quote.approval_requested": "Pediu aprovação de desconto",
+  "quote.discount_approved": "Aprovou um desconto",
+  "quote.approve": "Registou a aprovação de um orçamento",
+  "quote.reject": "Registou a rejeição de um orçamento",
+  "quote.cancel": "Cancelou um orçamento",
+  "settings.update": "Alterou as definições da empresa",
+  "settings.logo": "Alterou o logótipo",
+  "settings.logo_remove": "Removeu o logótipo",
+  "service.create": "Criou um serviço adicional",
+  "service.update": "Editou um serviço adicional",
 };
 
 export function describeAction(action: string): string {
@@ -135,5 +151,7 @@ export function auditTargetHref(entity: string, entityId: string | null): string
   if (entity === "Article") return `/artigos/${entityId}`;
   if (entity === "Category") return "/categorias";
   if (entity === "Rental") return `/reservas/${entityId}`;
+  if (entity === "Quote") return `/orcamentos/${entityId}`;
+  if (entity === "CompanySettings" || entity === "AdditionalService") return "/definicoes";
   return null;
 }

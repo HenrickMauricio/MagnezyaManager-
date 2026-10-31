@@ -281,3 +281,27 @@ function auditSnapshot(client: Awaited<ReturnType<typeof getEditableClient>>) {
     gdprConsentAt: client.gdprConsentAt?.toISOString() ?? null,
   };
 }
+
+/** Orçamentos e reservas do cliente (só o que o utilizador pode consultar). */
+export async function getClientHistory(user: CurrentUser, clientId: string) {
+  assertPermission(user, "client:view");
+  const [quotes, rentals] = await Promise.all([
+    user.permissions.has("quote:view")
+      ? prisma.quote.findMany({
+          where: { clientId },
+          orderBy: { updatedAt: "desc" },
+          take: 10,
+          select: { id: true, number: true, status: true, totalCents: true, event: { select: { name: true } } },
+        })
+      : Promise.resolve(null),
+    user.permissions.has("rental:view")
+      ? prisma.rental.findMany({
+          where: { clientId },
+          orderBy: { deliveryDate: "desc" },
+          take: 10,
+          select: { id: true, number: true, status: true, deliveryDate: true, event: { select: { name: true } } },
+        })
+      : Promise.resolve(null),
+  ]);
+  return { quotes, rentals };
+}

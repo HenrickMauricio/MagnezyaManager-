@@ -465,6 +465,21 @@ A Magnezya desistiu do sistema. O projeto continua como **produto próprio**, pa
 
 **Pendente para fases seguintes:** editar datas/linhas de uma reserva existente (hoje: cancelar e criar de novo); "procura pendente" de orçamentos enviados (D3) quando existirem orçamentos (Fase 5); conjuntos/kits (P8).
 
+### 8.5 Decisões da Fase 5 (31/10/2026)
+
+| # | Decisão |
+|---|---|
+| Q1 | **Dias faturáveis** = dias do evento (início → fim, inclusive). Entrega e recolha não são cobradas (só ocupam stock). |
+| Q2 | **Preço congelado por linha:** um artigo mantém o preço com que entrou no orçamento, mesmo que o catálogo mude; "Duplicar" usa os preços atuais. |
+| Q3 | **Cálculo:** desconto de linha, depois desconto global proporcional (só artigos); serviços sem desconto; IVA por taxa sobre a base tributável; arredondamento ao cêntimo por linha. Totais calculados no servidor; o browser só pré-visualiza com o mesmo motor (`src/lib/pricing.ts`). |
+| Q4 | **D4:** o limite é o de quem emite; um administrador "aprova e emite". Qualquer edição posterior anula a aprovação. |
+| Q5 | **Aprovação registada internamente** (aceitação do cliente por email/telefone) cria a reserva pelo mesmo serviço das reservas diretas e é recusada se faltar stock. A aprovação pelo portal (Fase 7) seguirá D6 (fica em conflito). |
+| Q6 | **Versões imutáveis:** snapshot JSON completo + PDF guardado com SHA-256, verificado em cada download (cumpre o critério da Fase 6). |
+| Q7 | **PDF** com @react-pdf/renderer 4.9 carregado só quando é preciso; fonte Helvetica; fotografias em JPEG pequeno. |
+| Q8 | **Expiração** automática de propostas emitidas fora da validade; **bloqueio otimista** (`lockVersion`) contra edições simultâneas. |
+
+**Pendente:** envio por email com registo (Fase 6); "procura pendente" de propostas emitidas na disponibilidade (D3); aprovação pelo portal (Fase 7).
+
 ## 8.1 Questões originais (histórico)
 
 **D1 — Modelo de preço.** O preço de aluguer é (a) por evento/período (ex.: até 3 dias), (b) por dia, ou (c) degressivo (1.º dia preço total, dias seguintes com desconto)? *Proposta:* suportar (a) e (b) por artigo, com (c) como regra opcional.

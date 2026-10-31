@@ -118,6 +118,18 @@ tests/unit/       testes (node:test via tsx)
 - Fotografias servidas apenas a utilizadores com sessão e permissão (`/api/ficheiros/...`);
   metadados (ex.: localização GPS) removidos no carregamento.
 
+### Orçamentos
+
+- Preço por dia × dias do evento (início → fim, inclusive) ou por evento; desconto por linha e
+  global; serviços adicionais; IVA calculado por taxa sobre a base tributável. Totais sempre
+  recalculados no servidor.
+- Desconto acima do limite de quem emite → "A aguardar aprovação" de um administrador.
+- Vendedores veem todos os orçamentos e editam só os seus.
+- **Emitir** congela uma versão (snapshot + PDF guardado com SHA-256). Versões antigas nunca
+  mudam; editar um orçamento emitido cria a versão seguinte.
+- **Aprovado pelo cliente** reserva o stock na hora; se faltar material, a aprovação é recusada.
+- Dados da empresa, logótipo, condições e serviços em **Definições** (aparecem no PDF).
+
 ### Catálogo e stock
 
 - O stock de um artigo = **stock inicial** (definido ao criar) **+ movimentos** (entrada, abate,
@@ -140,7 +152,7 @@ tests/unit/       testes (node:test via tsx)
 - [x] **Fase 2** — dashboard, utilizadores e clientes
 - [~] **Fase 3** — artigos e inventário *(falta o importador de planilhas CSV/Excel)*
 - [x] **Fase 4** — motor de disponibilidade, reservas diretas, calendário
-- [ ] Fase 5 — orçamentos
-- [ ] Fase 6 — PDF e email
+- [x] **Fase 5** — orçamentos (construtor, descontos com limite, IVA por taxa, aprovação → reserva)
+- [~] **Fase 6** — PDF e versões imutáveis feitos; falta o envio por email
 - [ ] Fase 7 — portal do cliente
 - [ ] Fase 8 — testes, segurança e produção

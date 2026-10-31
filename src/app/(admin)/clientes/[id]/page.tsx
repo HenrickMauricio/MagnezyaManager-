@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Archive, ArchiveRestore, FileText, Pencil, UserPlus } from "lucide-react";
 import { requirePagePermission } from "@/server/auth/session";
-import { getClient } from "@/server/services/clients";
+import { getClient, getClientHistory } from "@/server/services/clients";
 import { archiveClientAction, restoreClientAction } from "@/server/actions/clients";
 import { orNotFound } from "@/server/page-helpers";
 import { ContactsSection } from "@/components/features/clients/contacts-section";
@@ -12,14 +12,18 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { ConfirmButton } from "@/components/ui/dialog";
 import { DetailList, PageHeader } from "@/components/ui/page";
 import { CLIENT_TYPES, COUNTRIES, type CountryCode } from "@/lib/validation/clients";
-import { formatDate, formatDateTime } from "@/lib/format";
+import { formatCents, formatDate, formatDateTime } from "@/lib/format";
+import type { QuoteStatus } from "@/lib/validation/quotes";
+import type { RentalStatus } from "@/lib/validation/rentals";
+import { QuoteStatusBadge } from "@/components/features/quotes/quote-status";
+import { RentalStatusBadge } from "@/components/features/rentals/rental-status";
 
 export const metadata: Metadata = { title: "Cliente" };
 
 export default async function ClientPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await requirePagePermission("client:view");
-  const c = await orNotFound(getClient(user, id));
+  const [c, history] = await Promise.all([orNotFound(getClient(user, id)), getClientHistory(user, id)]);
 
   const archived = c.archivedAt !== null;
   const canEdit = user.permissions.has("client:edit") && !archived;
@@ -156,13 +160,66 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
             )}
           </Card>
 
-          <Card>
-            <CardHeader title="Orçamentos e alugueres" action={<Badge>Fase 5</Badge>} />
-            <div className="flex flex-col items-center px-5 py-8 text-center text-[14px] text-fg-muted">
-              <FileText className="mb-3 size-6 text-fg-subtle" strokeWidth={1.5} />
-              O histórico de orçamentos deste cliente aparece aqui quando o módulo de orçamentos estiver ativo.
-            </div>
-          </Card>
+          {history.quotes && (
+            <Card>
+              <CardHeader
+                title="Orçamentos"
+                action={
+                  user.permissions.has("quote:create") &&
+                  !archived && (
+                    <Link href={`/orcamentos/novo?cliente=${c.id}`} className={buttonClasses({ variant: "secondary", size: "sm" })}>
+                      <FileText className="size-4" /> Novo
+                    </Link>
+                  )
+                }
+              />
+              {history.quotes.length === 0 ? (
+                <p className="px-5 py-8 text-center text-[14px] text-fg-muted">Sem orçamentos.</p>
+              ) : (
+                <ul className="divide-y divide-border">
+                  {history.quotes.map((q) => (
+                    <li key={q.id} className="relative flex items-center justify-between gap-3 px-5 py-3 hover:bg-surface-2/60">
+                      <div className="min-w-0">
+                        <Link href={`/orcamentos/${q.id}`} className="font-medium after:absolute after:inset-0">
+                          {q.number}
+                        </Link>
+                        <div className="truncate text-[13px] text-fg-muted">{q.event.name}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="tabular text-[13px] font-medium">{formatCents(q.totalCents)}</div>
+                        <QuoteStatusBadge status={q.status as QuoteStatus} />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          )}
+
+          {history.rentals && (
+            <Card>
+              <CardHeader title="Reservas" />
+              {history.rentals.length === 0 ? (
+                <p className="px-5 py-8 text-center text-[14px] text-fg-muted">Sem reservas.</p>
+              ) : (
+                <ul className="divide-y divide-border">
+                  {history.rentals.map((r) => (
+                    <li key={r.id} className="relative flex items-center justify-between gap-3 px-5 py-3 hover:bg-surface-2/60">
+                      <div className="min-w-0">
+                        <Link href={`/reservas/${r.id}`} className="font-medium after:absolute after:inset-0">
+                          {r.number}
+                        </Link>
+                        <div className="truncate text-[13px] text-fg-muted">
+                          {r.event.name} · {formatDate(r.deliveryDate)}
+                        </div>
+                      </div>
+                      <RentalStatusBadge status={r.status as RentalStatus} />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          )}
         </div>
       </div>
     </div>

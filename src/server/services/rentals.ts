@@ -78,21 +78,32 @@ async function lockArticles(tx: Prisma.TransactionClient, articleIds: string[]) 
   await tx.$queryRaw`SELECT id FROM articles WHERE id = ANY(${ids}) ORDER BY id FOR UPDATE`;
 }
 
+export type ReservationParams = {
+  clientId: string;
+  eventId: string;
+  /** Orçamento de origem (reserva criada pela aprovação). */
+  quoteId?: string;
+  deliveryDate: string;
+  startDate: string;
+  endDate: string;
+  returnDate: string;
+  notes: string | null;
+  lines: { articleId: string; quantity: number }[];
+};
+
 /**
- * Cria uma reserva direta. Numa transação (plano §3.4):
+ * Reserva stock dentro de uma transação já aberta (plano §3.4):
  *  1. bloqueia as linhas dos artigos envolvidos, sempre pela mesma ordem;
  *  2. recalcula a disponibilidade já com o bloqueio;
  *  3. se faltar stock em algum dia, aborta com a mensagem do primeiro problema;
- *  4. cria evento, reserva e linhas, e regista a auditoria.
+ *  4. cria a reserva e as linhas, e regista a auditoria.
+ * Usada pelas reservas diretas e pela aprovação de orçamentos.
  */
-export async function createRental(user: CurrentUser, input: RentalInput) {
-  assertPermission(user, "rental:manage");
+export async function reserveInTx(tx: Prisma.TransactionClient, userId: string, params: ReservationParams) {
+  const articleIds = params.lines.map((l) => l.articleId);
+  await lockArticles(tx, articleIds);
 
-  const client = await prisma.client.findUnique({ where: { id: input.clientId }, select: { archivedAt: true } });
-  if (!client || client.archivedAt) throw new ConflictError("Escolha um cliente ativo.");
-
-  const articleIds = input.lines.map((l) => l.articleId);
-  const articles = await prisma.article.findMany({
+  const articles = await tx.article.findMany({
     where: { id: { in: articleIds } },
     select: { id: true, name: true, status: true, archivedAt: true, category: { select: { prepBufferDays: true } } },
   });
@@ -102,46 +113,56 @@ export async function createRental(user: CurrentUser, input: RentalInput) {
     if (a.archivedAt || a.status !== "ATIVO") throw new ConflictError(`"${a.name}" não está ativo e não pode ser reservado.`);
   }
 
+  const shortages = await findLineShortages(tx, params.lines, params.deliveryDate, params.returnDate);
+  if (shortages.length) throw new ConflictError(shortageMessage(shortages[0]!));
+
+  const number = await nextDocumentNumber(tx, "RES", Number(params.deliveryDate.slice(0, 4)));
+  const rental = await tx.rental.create({
+    data: {
+      number,
+      clientId: params.clientId,
+      eventId: params.eventId,
+      quoteId: params.quoteId,
+      createdById: userId,
+      deliveryDate: isoToDateOnly(params.deliveryDate),
+      startDate: isoToDateOnly(params.startDate),
+      endDate: isoToDateOnly(params.endDate),
+      returnDate: isoToDateOnly(params.returnDate),
+      notes: params.notes,
+      items: {
+        create: params.lines.map((l) => {
+          const buffer = articles.find((a) => a.id === l.articleId)!.category.prepBufferDays;
+          return {
+            articleId: l.articleId,
+            quantity: l.quantity,
+            prepBufferDays: buffer,
+            blockFrom: isoToDateOnly(params.deliveryDate),
+            blockTo: isoToDateOnly(blockEnd(params.returnDate, buffer)),
+          };
+        }),
+      },
+    },
+  });
+  await logAudit(
+    { actorId: userId, action: "rental.create", entity: "Rental", entityId: rental.id, after: { number, ...params } },
+    tx,
+  );
+  return rental;
+}
+
+/** Cria uma reserva direta (sem orçamento). */
+export async function createRental(user: CurrentUser, input: RentalInput) {
+  assertPermission(user, "rental:manage");
+
+  const client = await prisma.client.findUnique({ where: { id: input.clientId }, select: { archivedAt: true } });
+  if (!client || client.archivedAt) throw new ConflictError("Escolha um cliente ativo.");
+
   return prisma.$transaction(
     async (tx) => {
-      await lockArticles(tx, articleIds);
-      const shortages = await findLineShortages(tx, input.lines, input.deliveryDate, input.returnDate);
-      if (shortages.length) throw new ConflictError(shortageMessage(shortages[0]!));
-
       const event = await tx.event.create({
         data: { clientId: input.clientId, name: input.eventName, venue: input.venue, city: input.city },
       });
-      const number = await nextDocumentNumber(tx, "RES", Number(input.deliveryDate.slice(0, 4)));
-      const rental = await tx.rental.create({
-        data: {
-          number,
-          clientId: input.clientId,
-          eventId: event.id,
-          createdById: user.id,
-          deliveryDate: isoToDateOnly(input.deliveryDate),
-          startDate: isoToDateOnly(input.startDate),
-          endDate: isoToDateOnly(input.endDate),
-          returnDate: isoToDateOnly(input.returnDate),
-          notes: input.notes,
-          items: {
-            create: input.lines.map((l) => {
-              const buffer = articles.find((a) => a.id === l.articleId)!.category.prepBufferDays;
-              return {
-                articleId: l.articleId,
-                quantity: l.quantity,
-                prepBufferDays: buffer,
-                blockFrom: isoToDateOnly(input.deliveryDate),
-                blockTo: isoToDateOnly(blockEnd(input.returnDate, buffer)),
-              };
-            }),
-          },
-        },
-      });
-      await logAudit(
-        { actorId: user.id, action: "rental.create", entity: "Rental", entityId: rental.id, after: { number, ...input } },
-        tx,
-      );
-      return rental;
+      return reserveInTx(tx, user.id, { ...input, eventId: event.id });
     },
     { timeout: 20_000 },
   );
