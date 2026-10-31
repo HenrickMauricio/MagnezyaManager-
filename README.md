@@ -117,6 +117,8 @@ tests/unit/       testes (node:test via tsx)
 - Auditoria de logins, logouts, tentativas falhadas e de todas as alterações a clientes e utilizadores (`audit_logs`).
 - Desativar uma conta termina de imediato as suas sessões; nunca pode ficar sem administradores ativos.
 - Arquivar um cliente desativa as contas do portal desse cliente.
+- Portal: cada cliente só vê as suas propostas e reservas (filtro pelo cliente da sessão em todas
+  as queries); propostas de outros clientes respondem "não encontrado" (404).
 - Fotografias servidas apenas a utilizadores com sessão e permissão (`/api/ficheiros/...`);
   metadados (ex.: localização GPS) removidos no carregamento.
 
@@ -129,8 +131,19 @@ tests/unit/       testes (node:test via tsx)
 - Vendedores veem todos os orçamentos e editam só os seus.
 - **Emitir** congela uma versão (snapshot + PDF guardado com SHA-256). Versões antigas nunca
   mudam; editar um orçamento emitido cria a versão seguinte.
-- **Aprovado pelo cliente** reserva o stock na hora; se faltar material, a aprovação é recusada.
+- **Aprovado pelo cliente** (registado pela equipa) reserva o stock na hora; se faltar material, a aprovação é recusada.
 - Dados da empresa, logótipo, condições e serviços em **Definições** (aparecem no PDF).
+
+### Portal do cliente
+
+- O cliente vê as propostas já emitidas (nunca rascunhos), a última versão enviada, o histórico de
+  versões e descarrega os PDFs guardados.
+- **Aprovar** exige aceitar as condições e responder à versão atual; fica registado quem, quando,
+  a versão e o IP. A reserva é criada na hora; se entretanto faltar stock, fica em
+  **Conflito de stock** e a equipa confirma ("Confirmar reserva") quando houver material.
+- **Recusar** regista o motivo (opcional), quem, quando e o IP.
+- Propostas em revisão, expiradas ou já respondidas não aceitam resposta.
+- A equipa vê as respostas no painel ("Respostas de clientes") e na ficha do orçamento.
 
 ### Catálogo e stock
 
@@ -156,5 +169,5 @@ tests/unit/       testes (node:test via tsx)
 - [x] **Fase 4** — motor de disponibilidade, reservas diretas, calendário
 - [x] **Fase 5** — orçamentos (construtor, descontos com limite, IVA por taxa, aprovação → reserva)
 - [x] **Fase 6** — PDF e versões imutáveis (envio por email descartado: o PDF é enviado pelo programa de email do vendedor)
-- [ ] Fase 7 — portal do cliente
+- [x] **Fase 7** — portal do cliente (propostas, PDF, aprovar/recusar com registo, reservas, conta)
 - [ ] Fase 8 — testes, segurança e produção

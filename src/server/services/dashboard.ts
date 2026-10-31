@@ -16,6 +16,7 @@ export async function getDashboardOverview(user: CurrentUser) {
 
   const activeArticle = { archivedAt: null, status: "ATIVO" as const };
   const since30Days = new Date(Date.now() - 30 * DAY_MS);
+  const since14Days = new Date(Date.now() - 14 * DAY_MS);
   const isManager = user.permissions.has("user:manage");
   const canSeeClients = user.permissions.has("client:view");
 
@@ -32,6 +33,7 @@ export async function getDashboardOverview(user: CurrentUser) {
     recentClients,
     recentActivity,
     maintenance,
+    clientResponses,
   ] = await Promise.all([
     prisma.article.count({ where: activeArticle }),
     prisma.article.aggregate({ where: activeArticle, _sum: { stockBase: true } }),
@@ -67,6 +69,29 @@ export async function getDashboardOverview(user: CurrentUser) {
         })
       : Promise.resolve(null),
     getMaintenanceSummary(),
+    // Respostas dadas pelos clientes no portal (aprovações e recusas recentes).
+    user.permissions.has("quote:view")
+      ? prisma.quote.findMany({
+          where: {
+            OR: [
+              { approvedVia: "PORTAL", approvedAt: { gte: since14Days } },
+              { rejectedVia: "PORTAL", rejectedAt: { gte: since14Days } },
+            ],
+          },
+          orderBy: { updatedAt: "desc" },
+          take: 6,
+          select: {
+            id: true,
+            number: true,
+            status: true,
+            approvedAt: true,
+            rejectedAt: true,
+            client: { select: { name: true } },
+            event: { select: { name: true } },
+            rental: { select: { status: true } },
+          },
+        })
+      : Promise.resolve(null),
   ]);
 
   return {
@@ -81,6 +106,7 @@ export async function getDashboardOverview(user: CurrentUser) {
     recentClients,
     recentActivity,
     maintenance,
+    clientResponses,
   };
 }
 
@@ -133,6 +159,9 @@ const ACTION_LABELS: Record<string, string> = {
   "quote.reject": "Registou a rejeição de um orçamento",
   "quote.cancel": "Cancelou um orçamento",
   "quote.pdf_regenerated": "PDF recuperado a partir da versão guardada",
+  "quote.portal_approve": "Cliente aprovou uma proposta no portal",
+  "quote.portal_reject": "Cliente recusou uma proposta no portal",
+  "rental.conflict_resolved": "Confirmou uma reserva em conflito",
   "settings.update": "Alterou as definições da empresa",
   "settings.logo": "Alterou o logótipo",
   "settings.logo_remove": "Removeu o logótipo",

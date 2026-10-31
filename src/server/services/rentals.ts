@@ -89,6 +89,11 @@ export type ReservationParams = {
   returnDate: string;
   notes: string | null;
   lines: { articleId: string; quantity: number }[];
+  /**
+   * O que fazer se faltar stock: recusar (reservas diretas, aprovação interna)
+   * ou criar a reserva em "Conflito de stock" (aprovação do cliente no portal, D6).
+   */
+  onShortage?: "refuse" | "conflict";
 };
 
 /**
@@ -114,7 +119,7 @@ export async function reserveInTx(tx: Prisma.TransactionClient, userId: string, 
   }
 
   const shortages = await findLineShortages(tx, params.lines, params.deliveryDate, params.returnDate);
-  if (shortages.length) throw new ConflictError(shortageMessage(shortages[0]!));
+  if (shortages.length && params.onShortage !== "conflict") throw new ConflictError(shortageMessage(shortages[0]!));
 
   const number = await nextDocumentNumber(tx, "RES", Number(params.deliveryDate.slice(0, 4)));
   const rental = await tx.rental.create({
@@ -124,6 +129,7 @@ export async function reserveInTx(tx: Prisma.TransactionClient, userId: string, 
       eventId: params.eventId,
       quoteId: params.quoteId,
       createdById: userId,
+      status: shortages.length ? "CONFLITO_STOCK" : "RESERVADO",
       deliveryDate: isoToDateOnly(params.deliveryDate),
       startDate: isoToDateOnly(params.startDate),
       endDate: isoToDateOnly(params.endDate),
@@ -144,10 +150,48 @@ export async function reserveInTx(tx: Prisma.TransactionClient, userId: string, 
     },
   });
   await logAudit(
-    { actorId: userId, action: "rental.create", entity: "Rental", entityId: rental.id, after: { number, ...params } },
+    {
+      actorId: userId,
+      action: "rental.create",
+      entity: "Rental",
+      entityId: rental.id,
+      after: { number, ...params, status: rental.status, shortages: shortages.map(shortageMessage) },
+    },
     tx,
   );
   return rental;
+}
+
+/**
+ * Resolve um conflito de stock (D6): volta a verificar a disponibilidade,
+ * sem contar com esta reserva, e passa-a a "Reservado" se já houver stock
+ * (ex.: depois de um reforço ou de cancelar outra reserva).
+ */
+export async function confirmConflict(user: CurrentUser, id: string) {
+  assertPermission(user, "rental:manage");
+  await prisma.$transaction(
+    async (tx) => {
+      const rental = await getForUpdate(tx, id);
+      if (rental.status !== "CONFLITO_STOCK") throw new ConflictError("Esta reserva não está em conflito de stock.");
+      await lockArticles(tx, rental.items.map((i) => i.articleId));
+      const shortages = await findLineShortages(
+        tx,
+        rental.items.map((i) => ({ articleId: i.articleId, quantity: i.quantity })),
+        dateOnlyToISO(rental.deliveryDate),
+        dateOnlyToISO(rental.returnDate),
+        { excludeRentalId: id },
+      );
+      if (shortages.length) {
+        throw new ConflictError(`Ainda não há stock. ${shortages.map(shortageMessage).join(" ")}`);
+      }
+      await tx.rental.update({ where: { id }, data: { status: "RESERVADO" } });
+      await logAudit(
+        { actorId: user.id, action: "rental.conflict_resolved", entity: "Rental", entityId: id, before: { status: "CONFLITO_STOCK" }, after: { status: "RESERVADO" } },
+        tx,
+      );
+    },
+    { timeout: 20_000 },
+  );
 }
 
 /** Cria uma reserva direta (sem orçamento). */

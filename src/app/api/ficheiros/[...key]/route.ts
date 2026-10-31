@@ -11,9 +11,12 @@ export async function GET(_request: Request, { params }: RouteContext<"/api/fich
 
   const key = (await params).key.join("/");
   if (!isValidStorageKey(key)) return new Response(null, { status: 404 });
-  // Fotografias de artigos: equipa interna. Logótipo da empresa: qualquer sessão.
+  // Fotografias de artigos: equipa interna e clientes do portal (aparecem nas propostas).
+  // Logótipo da empresa: qualquer sessão.
   if (key.startsWith("articles/")) {
-    if (!user.permissions.has("article:view")) return new Response(null, { status: 403 });
+    if (!user.permissions.has("article:view") && !user.permissions.has("portal:access")) {
+      return new Response(null, { status: 403 });
+    }
   } else if (!key.startsWith("branding/")) {
     return new Response(null, { status: 404 });
   }

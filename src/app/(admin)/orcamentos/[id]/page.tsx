@@ -88,8 +88,22 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
           Sem stock suficiente para {shortages.map((s) => `"${s.nameSnapshot}"`).join(", ")} nestas datas. A aprovação será recusada enquanto faltar material.
         </div>
       )}
-      {q.status === "REJEITADO" && q.rejectedReason && (
-        <div className="rounded-md bg-surface-2 px-4 py-3 text-[14px] text-fg-muted">Motivo da rejeição: {q.rejectedReason}</div>
+      {q.approvedVia === "PORTAL" && q.approvedAt && (
+        <div role="status" className="rounded-md bg-success-bg px-4 py-3 text-[14px] text-success">
+          Aprovado pelo cliente no portal{q.approvedBy && ` por ${q.approvedBy.name}`} a {formatDateTime(q.approvedAt)}
+          {q.approvedVersion && ` (versão ${q.approvedVersion})`}
+          {q.approvalIp && ` · IP ${q.approvalIp}`}.
+          {q.rental?.status === "CONFLITO_STOCK" && " A reserva ficou em conflito de stock: resolva-a na ficha da reserva."}
+        </div>
+      )}
+      {q.status === "REJEITADO" && (
+        <div className="rounded-md bg-surface-2 px-4 py-3 text-[14px] text-fg-muted">
+          {q.rejectedVia === "PORTAL" ? "Recusado pelo cliente no portal" : "Rejeitado"}
+          {q.rejectedBy && ` por ${q.rejectedBy.name}`}
+          {q.rejectedAt && ` a ${formatDateTime(q.rejectedAt)}`}
+          {q.rejectionIp && ` · IP ${q.rejectionIp}`}
+          {q.rejectedReason && ` — motivo: ${q.rejectedReason}`}
+        </div>
       )}
 
       <Card className="overflow-hidden">

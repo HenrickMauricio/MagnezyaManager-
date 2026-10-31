@@ -489,7 +489,20 @@ A Magnezya desistiu do sistema. O projeto continua como **produto próprio**, pa
 | E3 | **Paginação do PDF:** o cabeçalho da tabela não se repete nas páginas seguintes; título, cabeçalho e 1.ª linha de cada secção ficam sempre juntos. |
 | E4 | **Recuperação de PDFs** (`npm run pdfs:regenerar`): gera de novo, a partir do snapshot, PDFs cujo ficheiro desapareceu (ex.: cópia de segurança reposta sem os ficheiros), registando o novo hash na auditoria. |
 
-**Pendente:** aprovação da proposta pelo cliente no portal (Fase 7).
+**Pendente:** aprovação da proposta pelo cliente no portal (Fase 7) — feito, ver §8.7.
+
+### 8.7 Decisões da Fase 7 (31/10/2026)
+
+| # | Decisão |
+|---|---|
+| P1 | **Visibilidade:** o cliente só vê orçamentos do seu cliente (`clientId` da sessão, nunca de parâmetros) e já emitidos (`currentVersion > 0`); rascunhos nunca emitidos não aparecem. Mostra-se sempre o snapshot da última versão emitida, não os dados de trabalho. |
+| P2 | **Isolamento:** pedidos a propostas de outro cliente (página ou PDF) respondem 404, sem revelar que existem. A rota interna de PDF continua a exigir `quote:view` (403 para clientes). |
+| P3 | **Estados para o cliente:** Por responder · Em revisão (há alterações ainda não emitidas) · Aprovada · Recusada · Expirada · Cancelada. Só "Por responder" aceita resposta. |
+| P4 | **Aprovação:** exige aceitar as condições e indicar a versão a que se responde (tem de ser a atual). Regista quem, quando, a via (portal), o IP e a versão aprovada. Respostas simultâneas: o orçamento é bloqueado na transação, só a primeira conta. |
+| P5 | **D6:** aprovação pelo portal sem stock suficiente cria a reserva em **Conflito de stock** (continua a ocupar). A equipa liberta stock e usa "Confirmar reserva", que volta a verificar a disponibilidade; ou combina alternativa e cancela. |
+| P6 | **Recusa:** motivo opcional; regista quem, quando, a via e o IP. |
+| P7 | **Fotografias** dos artigos visíveis a clientes com sessão (necessárias na proposta). |
+| P8 | **Alertas:** respostas do portal nos últimos 14 dias no painel ("Respostas de clientes", com aviso de conflito) e banner na ficha do orçamento. Sem email (E1). |
 
 ## 8.1 Questões originais (histórico)
 

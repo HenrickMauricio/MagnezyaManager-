@@ -137,6 +137,7 @@ model User {
   quotesCreated       Quote[]             @relation("QuoteCreatedBy")
   quotesApproved      Quote[]             @relation("QuoteApprovedBy")
   quotesInternallyOk  Quote[]             @relation("QuoteInternalApprovedBy")
+  quotesRejected      Quote[]             @relation("QuoteRejectedBy")
   quoteVersionsIssued QuoteVersion[]
   rentalsCreated      Rental[]            @relation("RentalCreatedBy")
   movements           InventoryMovement[]
@@ -527,8 +528,14 @@ model Quote {
   approvedBy           User?            @relation("QuoteApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
   approvedVia          ApprovalChannel?
   approvalIp           String?
+  /// Versão emitida que foi aprovada (a que o cliente viu).
+  approvedVersion      Int?
   rejectedAt           DateTime?
   rejectedReason       String?
+  rejectedById         String?
+  rejectedBy           User?            @relation("QuoteRejectedBy", fields: [rejectedById], references: [id], onDelete: SetNull)
+  rejectedVia          ApprovalChannel?
+  rejectionIp          String?
   cancelledAt          DateTime?
 
   createdAt DateTime @default(now())

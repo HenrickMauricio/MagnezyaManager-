@@ -14,9 +14,14 @@ const WINDOW_MS = 60_000;
 const MAX_PER_EMAIL = 5;
 const MAX_PER_IP = 20;
 
+/** IP de origem do pedido atual (null fora de um pedido HTTP, ex.: scripts e testes). */
 export async function clientIp(): Promise<string | null> {
-  const h = await headers();
-  return h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? h.get("x-real-ip");
+  try {
+    const h = await headers();
+    return h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? h.get("x-real-ip");
+  } catch {
+    return null;
+  }
 }
 
 export async function isLoginThrottled(email: string, ip: string | null): Promise<boolean> {

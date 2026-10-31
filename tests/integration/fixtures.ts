@@ -34,3 +34,10 @@ export async function defaultTaxRate() {
     create: { name: "Taxa normal", rateBp: 2300, region: "CONTINENTE", isDefault: true },
   });
 }
+
+/** Utilizador do portal ligado a um cliente. */
+export async function makeClientUser(email: string, clientId: string): Promise<CurrentUser> {
+  const base = await makeUser("CLIENTE", email, 0);
+  await prisma.user.update({ where: { id: base.id }, data: { clientId } });
+  return { ...base, clientId };
+}

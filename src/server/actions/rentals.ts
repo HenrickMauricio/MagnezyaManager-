@@ -150,3 +150,13 @@ export async function calendarRentalsAction(input: z.input<typeof calendarSchema
     };
   });
 }
+
+export async function confirmConflictAction(id: string): Promise<ActionResult> {
+  try {
+    await rentals.confirmConflict(await requireUser(), id);
+    revalidateRentals(id);
+    return { ok: true, message: "Stock confirmado: a reserva passou a Reservado." };
+  } catch (err) {
+    return toActionError(err);
+  }
+}

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { PackageCheck, Truck, Undo2, XCircle } from "lucide-react";
 import {
   cancelRentalAction,
+  confirmConflictAction,
   markDeliveredAction,
   registerReturnAction,
   startPreparationAction,
@@ -43,6 +44,11 @@ export function RentalActions({
 
   return (
     <>
+      {status === "CONFLITO_STOCK" && (
+        <ActionButton action={confirmConflictAction.bind(null, rentalId)}>
+          <PackageCheck className="size-4" /> Confirmar reserva
+        </ActionButton>
+      )}
       {status === "RESERVADO" && (
         <ActionButton variant="secondary" action={startPreparationAction.bind(null, rentalId)}>
           <PackageCheck className="size-4" /> Em preparação

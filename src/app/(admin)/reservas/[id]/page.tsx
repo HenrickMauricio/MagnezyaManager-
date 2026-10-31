@@ -65,7 +65,8 @@ export default async function RentalPage({ params }: { params: Promise<{ id: str
 
       {status === "CONFLITO_STOCK" && (
         <div role="alert" className="rounded-md bg-danger-bg px-4 py-3 text-[14px] text-danger">
-          Esta reserva excede o stock disponível. Resolva o conflito (reforçar stock, ajustar ou cancelar outra reserva) antes da entrega.
+          Esta reserva excede o stock disponível (o cliente aprovou a proposta quando já faltava material). Liberte stock — reforço,
+          ajuste ou cancelamento de outra reserva — e use &quot;Confirmar reserva&quot;; ou combine uma alternativa com o cliente e cancele.
         </div>
       )}
 

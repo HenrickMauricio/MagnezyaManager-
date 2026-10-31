@@ -6,6 +6,7 @@ import { auditTargetHref, describeAction, getDashboardOverview } from "@/server/
 import { getOperationsSummary } from "@/server/services/rentals";
 import { OperationsCard } from "@/components/features/rentals/operations-card";
 import { Card, CardHeader, StatCard } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { formatDate, formatDateLong, formatDateTime, formatInteger } from "@/lib/format";
 import type { Permission } from "@/lib/permissions";
 
@@ -95,6 +96,35 @@ export default async function DashboardPage() {
       </section>
 
       {operations && <OperationsCard data={operations} />}
+
+      {data.clientResponses && data.clientResponses.length > 0 && (
+        <Card>
+          <CardHeader title="Respostas de clientes" description="Propostas aprovadas ou recusadas no portal (últimos 14 dias)" />
+          <ul className="divide-y divide-border">
+            {data.clientResponses.map((r) => {
+              const approved = r.status === "APROVADO";
+              const at = approved ? r.approvedAt : r.rejectedAt;
+              return (
+                <li key={r.id} className="relative flex flex-wrap items-center justify-between gap-3 px-5 py-3 hover:bg-surface-2/60">
+                  <div className="min-w-0">
+                    <Link href={`/orcamentos/${r.id}`} className="font-medium after:absolute after:inset-0">
+                      {r.number} · {r.event.name}
+                    </Link>
+                    <div className="text-[12px] text-fg-muted">
+                      {r.client.name}
+                      {at && ` · ${formatDateTime(at)}`}
+                    </div>
+                  </div>
+                  <div className="flex gap-1.5">
+                    <Badge tone={approved ? "success" : "neutral"}>{approved ? "Aprovada" : "Recusada"}</Badge>
+                    {r.rental?.status === "CONFLITO_STOCK" && <Badge tone="danger">Conflito de stock</Badge>}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
+      )}
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-2">
         {data.recentClients && (

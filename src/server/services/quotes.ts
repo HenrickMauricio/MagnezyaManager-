@@ -81,6 +81,7 @@ export async function getQuote(user: CurrentUser, id: string) {
       createdBy: { select: { id: true, name: true } },
       internalApprovedBy: { select: { name: true } },
       approvedBy: { select: { name: true } },
+      rejectedBy: { select: { name: true } },
       items: {
         orderBy: { sortOrder: "asc" },
         include: {
