@@ -132,6 +132,7 @@ const ACTION_LABELS: Record<string, string> = {
   "quote.approve": "Registou a aprovação de um orçamento",
   "quote.reject": "Registou a rejeição de um orçamento",
   "quote.cancel": "Cancelou um orçamento",
+  "quote.pdf_regenerated": "PDF recuperado a partir da versão guardada",
   "settings.update": "Alterou as definições da empresa",
   "settings.logo": "Alterou o logótipo",
   "settings.logo_remove": "Removeu o logótipo",

@@ -1,7 +1,8 @@
 /**
- * Carregado com --require nos testes de integração: os serviços importam
- * "server-only", que fora do Next.js lança um erro de propósito. Nos testes
- * (Node puro) é substituído por um módulo vazio; a aplicação não é afetada.
+ * Carregado com --require nos testes de integração e nos scripts de manutenção:
+ * os serviços importam "server-only", que fora do Next.js lança um erro de
+ * propósito. Aqui (Node puro) é substituído por um módulo vazio; a aplicação
+ * não é afetada.
  */
 const Module = require("node:module");
 const path = require("node:path");

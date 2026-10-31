@@ -13,7 +13,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test \"tests/unit/**/*.test.ts\"",
-    "test:integration": "tsx scripts/test-db.ts && tsx --require ./tests/integration/register.cjs --test \"tests/integration/**/*.test.ts\"",
+    "test:integration": "tsx scripts/test-db.ts && tsx --require ./scripts/support/server-only-register.cjs --test \"tests/integration/**/*.test.ts\"",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:migrate": "prisma migrate dev",
@@ -22,6 +22,7 @@
     "db:studio": "prisma studio",
     "catalogo:importar": "tsx scripts/catalogo-magnezya.ts",
     "catalogo:imagens": "tsx scripts/catalogo-imagens.ts",
+    "pdfs:regenerar": "tsx --require ./scripts/support/server-only-register.cjs scripts/regenerar-pdfs.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

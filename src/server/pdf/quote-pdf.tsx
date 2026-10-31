@@ -87,6 +87,53 @@ function QuoteDocument({
   const contactLine = [c.phone, c.email, c.website, iban && `IBAN ${iban}`].filter(Boolean).join(" · ");
   const terms = (q.terms ?? "").split("\n").map((t) => t.trim()).filter(Boolean);
 
+  const itemRow = (i: number) => {
+    const item = q.items[i];
+    if (!item) return null;
+    const photo = photos[i];
+    return (
+      <View key={`${item.sku}-${i}`} style={s.tr} wrap={false}>
+        {photo ? <Image style={s.photo} src={photo} /> : <View style={s.photoEmpty} />}
+        <View style={s.colName}>
+          <Text>{item.name}</Text>
+          <Text style={s.muted}>{item.sku}</Text>
+        </View>
+        <Text style={s.colNum}>
+          {formatInteger(item.quantity)} {item.unit}
+        </Text>
+        <Text style={s.colWide}>
+          {money(item.unitPriceCents)}
+          {item.priceUnit === "POR_DIA" ? "/dia" : ""}
+        </Text>
+        <Text style={s.colNum}>{item.priceUnit === "POR_DIA" ? item.billableDays : "—"}</Text>
+        <Text style={s.colNum}>{item.discountBp ? pct(item.discountBp) : "—"}</Text>
+        <Text style={s.colNum}>{pct(item.taxRateBp)}</Text>
+        <Text style={s.colWide}>{money(item.totalCents)}</Text>
+      </View>
+    );
+  };
+
+  const serviceRow = (i: number) => {
+    const svc = q.services[i];
+    if (!svc) return null;
+    return (
+      <View key={i} style={s.tr} wrap={false}>
+        <Text style={s.colName}>{svc.description}</Text>
+        <Text style={s.colNum}>{formatInteger(svc.quantity)}</Text>
+        <Text style={s.colWide}>{money(svc.unitPriceCents)}</Text>
+        <Text style={s.colNum}>{pct(svc.taxRateBp)}</Text>
+        <Text style={s.colWide}>{money(svc.totalCents)}</Text>
+      </View>
+    );
+  };
+
+  const termRow = (i: number) => (
+    <View key={i} style={s.term} wrap={false}>
+      <Text style={{ width: 10 }}>•</Text>
+      <Text style={{ flex: 1 }}>{terms[i]}</Text>
+    </View>
+  );
+
   return (
     <Document title={`Proposta ${q.number}`} author={c.tradeName} creator={c.tradeName} language="pt-PT">
       <Page size="A4" style={s.page}>
@@ -135,60 +182,37 @@ function QuoteDocument({
           </View>
         </View>
 
-        <Text style={s.sectionTitle}>Artigos</Text>
-        <View style={s.th} fixed>
-          <Text style={{ width: 42 }} />
-          <Text style={s.colName}>ARTIGO</Text>
-          <Text style={s.colNum}>QTD.</Text>
-          <Text style={s.colWide}>PREÇO UN.</Text>
-          <Text style={s.colNum}>DIAS</Text>
-          <Text style={s.colNum}>DESC.</Text>
-          <Text style={s.colNum}>IVA</Text>
-          <Text style={s.colWide}>TOTAL</Text>
+        {/* Título, cabeçalho e 1.ª linha num bloco indivisível: nunca ficam sozinhos no fim da página. */}
+        <View wrap={false}>
+          <Text style={s.sectionTitle}>Artigos</Text>
+          <View style={s.th}>
+            <Text style={{ width: 42 }} />
+            <Text style={s.colName}>ARTIGO</Text>
+            <Text style={s.colNum}>QTD.</Text>
+            <Text style={s.colWide}>PREÇO UN.</Text>
+            <Text style={s.colNum}>DIAS</Text>
+            <Text style={s.colNum}>DESC.</Text>
+            <Text style={s.colNum}>IVA</Text>
+            <Text style={s.colWide}>TOTAL</Text>
+          </View>
+          {itemRow(0)}
         </View>
-        {q.items.map((item, i) => {
-          const photo = photos[i];
-          return (
-            <View key={`${item.sku}-${i}`} style={s.tr} wrap={false}>
-              {photo ? <Image style={s.photo} src={photo} /> : <View style={s.photoEmpty} />}
-              <View style={s.colName}>
-                <Text>{item.name}</Text>
-                <Text style={s.muted}>{item.sku}</Text>
-              </View>
-              <Text style={s.colNum}>
-                {formatInteger(item.quantity)} {item.unit}
-              </Text>
-              <Text style={s.colWide}>
-                {money(item.unitPriceCents)}
-                {item.priceUnit === "POR_DIA" ? "/dia" : ""}
-              </Text>
-              <Text style={s.colNum}>{item.priceUnit === "POR_DIA" ? item.billableDays : "—"}</Text>
-              <Text style={s.colNum}>{item.discountBp ? pct(item.discountBp) : "—"}</Text>
-              <Text style={s.colNum}>{pct(item.taxRateBp)}</Text>
-              <Text style={s.colWide}>{money(item.totalCents)}</Text>
-            </View>
-          );
-        })}
+        {q.items.slice(1).map((_, i) => itemRow(i + 1))}
 
         {q.services.length > 0 && (
           <View style={s.block}>
-            <Text style={s.sectionTitle}>Serviços</Text>
-            <View style={s.th}>
-              <Text style={s.colName}>SERVIÇO</Text>
-              <Text style={s.colNum}>QTD.</Text>
-              <Text style={s.colWide}>PREÇO UN.</Text>
-              <Text style={s.colNum}>IVA</Text>
-              <Text style={s.colWide}>TOTAL</Text>
-            </View>
-            {q.services.map((svc, i) => (
-              <View key={i} style={s.tr} wrap={false}>
-                <Text style={s.colName}>{svc.description}</Text>
-                <Text style={s.colNum}>{formatInteger(svc.quantity)}</Text>
-                <Text style={s.colWide}>{money(svc.unitPriceCents)}</Text>
-                <Text style={s.colNum}>{pct(svc.taxRateBp)}</Text>
-                <Text style={s.colWide}>{money(svc.totalCents)}</Text>
+            <View wrap={false}>
+              <Text style={s.sectionTitle}>Serviços</Text>
+              <View style={s.th}>
+                <Text style={s.colName}>SERVIÇO</Text>
+                <Text style={s.colNum}>QTD.</Text>
+                <Text style={s.colWide}>PREÇO UN.</Text>
+                <Text style={s.colNum}>IVA</Text>
+                <Text style={s.colWide}>TOTAL</Text>
               </View>
-            ))}
+              {serviceRow(0)}
+            </View>
+            {q.services.slice(1).map((_, i) => serviceRow(i + 1))}
           </View>
         )}
 
@@ -232,13 +256,11 @@ function QuoteDocument({
 
         {terms.length > 0 && (
           <View style={s.block}>
-            <Text style={s.sectionTitle}>Condições</Text>
-            {terms.map((t, i) => (
-              <View key={i} style={s.term} wrap={false}>
-                <Text style={{ width: 10 }}>•</Text>
-                <Text style={{ flex: 1 }}>{t}</Text>
-              </View>
-            ))}
+            <View wrap={false}>
+              <Text style={s.sectionTitle}>Condições</Text>
+              {termRow(0)}
+            </View>
+            {terms.slice(1).map((_, i) => termRow(i + 1))}
           </View>
         )}
 

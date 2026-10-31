@@ -61,7 +61,7 @@ Regra central: **a UI nunca fala com o Prisma diretamente** e nenhuma regra de n
 | Gráficos | Recharts | |
 | Calendário | FullCalendar (vistas dia/semana/mês, núcleo MIT) | ver risco §6 |
 | PDF | **@react-pdf/renderer** no servidor | layout fiel, sem browser headless |
-| Email | React Email + Resend (ou SMTP do domínio magnezya.pt) | |
+| Email | ~~React Email + Resend~~ — não usado: o PDF é enviado pelo programa de email do vendedor (decisão E1, §8.6) | |
 | Ficheiros | S3 compatível (Cloudflare R2 / AWS S3 região UE; MinIO em desenvolvimento) | fotos e PDFs emitidos |
 | Datas | date-fns + `@date-fns/tz`, locale `pt`, fuso `Europe/Lisbon` | |
 | Testes | Vitest (unitários/integração com Postgres real) + Playwright (E2E) | |
@@ -368,7 +368,7 @@ magnezya/
 ├─ tests/
 │  ├─ unit/  integration/  e2e/
 ├─ docs/                          # este plano, arquitetura, operação, RGPD
-├─ docker-compose.yml             # Postgres + MinIO + Mailpit (desenvolvimento)
+├─ docker-compose.yml             # Postgres (desenvolvimento)
 ├─ .env.example
 └─ README.md
 ```
@@ -479,6 +479,17 @@ A Magnezya desistiu do sistema. O projeto continua como **produto próprio**, pa
 | Q8 | **Expiração** automática de propostas emitidas fora da validade; **bloqueio otimista** (`lockVersion`) contra edições simultâneas. |
 
 **Pendente:** envio por email com registo (Fase 6); "procura pendente" de propostas emitidas na disponibilidade (D3); aprovação pelo portal (Fase 7).
+
+### 8.6 Decisões da Fase 6 (31/10/2026)
+
+| # | Decisão |
+|---|---|
+| E1 | **Sem envio de email pelo sistema** (decisão do utilizador): a proposta é descarregada em PDF e enviada pelo programa de email do vendedor. Retirados o envio SMTP e o Mailpit. A tabela `email_logs` do schema fica sem uso, disponível se a decisão mudar. |
+| E2 | **PDF e versões imutáveis** (feitos na Fase 5): snapshot + PDF guardado com SHA-256, verificado em cada download. |
+| E3 | **Paginação do PDF:** o cabeçalho da tabela não se repete nas páginas seguintes; título, cabeçalho e 1.ª linha de cada secção ficam sempre juntos. |
+| E4 | **Recuperação de PDFs** (`npm run pdfs:regenerar`): gera de novo, a partir do snapshot, PDFs cujo ficheiro desapareceu (ex.: cópia de segurança reposta sem os ficheiros), registando o novo hash na auditoria. |
+
+**Pendente:** aprovação da proposta pelo cliente no portal (Fase 7).
 
 ## 8.1 Questões originais (histórico)
 

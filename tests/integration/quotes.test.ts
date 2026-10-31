@@ -7,13 +7,12 @@ import { prisma } from "../../src/server/db";
 import * as quotes from "../../src/server/services/quotes";
 import { ConflictError, ForbiddenError } from "../../src/server/errors";
 import type { CurrentUser } from "../../src/server/auth/session";
-import { ROLE_DEFAULT_PERMISSIONS, type Permission, type RoleKey } from "../../src/lib/permissions";
+import { defaultTaxRate, makeUser, uniquePrefix } from "./fixtures";
 import type { QuoteInput } from "../../src/lib/validation/quotes";
 import type { QuoteSnapshot } from "../../src/lib/quote-snapshot";
 import { addDaysISO, todayISO } from "../../src/lib/format";
 
 const RUN = Date.now().toString(36);
-const uniquePrefix = () => Array.from({ length: 6 }, () => String.fromCharCode(65 + Math.floor(Math.random() * 26))).join("");
 let admin: CurrentUser;
 let sellerA: CurrentUser;
 let sellerB: CurrentUser;
@@ -21,36 +20,11 @@ let clientId: string;
 let categoryId: string;
 let taxRateId: string;
 
-async function makeUser(role: RoleKey, email: string, maxDiscountBp: number): Promise<CurrentUser> {
-  const r = await prisma.role.upsert({ where: { key: role }, update: {}, create: { key: role, name: role } });
-  const u = await prisma.user.upsert({
-    where: { email },
-    update: { maxDiscountBp },
-    create: { email, name: email.split("@")[0]!, roleId: r.id, maxDiscountBp },
-  });
-  return {
-    id: u.id,
-    name: u.name,
-    email: u.email,
-    role,
-    roleName: role,
-    clientId: null,
-    maxDiscountBp,
-    mustChangePassword: false,
-    permissions: new Set<Permission>(ROLE_DEFAULT_PERMISSIONS[role]),
-  };
-}
-
 before(async () => {
   admin = await makeUser("ADMIN", "q-admin@teste.local", 10_000);
   sellerA = await makeUser("VENDEDOR", "q-vendedor-a@teste.local", 1000);
   sellerB = await makeUser("VENDEDOR", "q-vendedor-b@teste.local", 1000);
-  const tax = await prisma.taxRate.upsert({
-    where: { name_region: { name: "Taxa normal", region: "CONTINENTE" } },
-    update: {},
-    create: { name: "Taxa normal", rateBp: 2300, region: "CONTINENTE", isDefault: true },
-  });
-  taxRateId = tax.id;
+  taxRateId = (await defaultTaxRate()).id;
   categoryId = (await prisma.category.create({ data: { name: `QCat ${RUN}`, slug: `qcat-${RUN}`, skuPrefix: uniquePrefix() } })).id;
   clientId = (await prisma.client.create({ data: { name: `Cliente Q ${RUN}`, nif: `8${RUN}`.slice(0, 12) } })).id;
   await prisma.companySettings.upsert({

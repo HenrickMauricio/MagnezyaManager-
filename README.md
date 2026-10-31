@@ -72,6 +72,8 @@ Contas do portal de clientes criam-se a partir da ficha do cliente ("Acesso ao p
 | `npm run db:studio` | Explorar a base de dados no browser |
 | `npm run catalogo:importar` | Atualizar `prisma/data/catalogo-magnezya.json` a partir de magnezya.pt |
 | `npm run catalogo:imagens` | Descarregar as fotografias do catálogo (só artigos sem fotografias) |
+| `npm run pdfs:regenerar` | Recuperar PDFs de propostas cujo ficheiro desapareceu (a partir do snapshot; `-- --ver` só lista) |
+
 
 ## Marca (white-label)
 
@@ -153,6 +155,6 @@ tests/unit/       testes (node:test via tsx)
 - [~] **Fase 3** — artigos e inventário *(falta o importador de planilhas CSV/Excel)*
 - [x] **Fase 4** — motor de disponibilidade, reservas diretas, calendário
 - [x] **Fase 5** — orçamentos (construtor, descontos com limite, IVA por taxa, aprovação → reserva)
-- [~] **Fase 6** — PDF e versões imutáveis feitos; falta o envio por email
+- [x] **Fase 6** — PDF e versões imutáveis (envio por email descartado: o PDF é enviado pelo programa de email do vendedor)
 - [ ] Fase 7 — portal do cliente
 - [ ] Fase 8 — testes, segurança e produção
