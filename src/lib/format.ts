@@ -8,6 +8,7 @@ export const TIME_ZONE = "Europe/Lisbon";
 
 const currency = new Intl.NumberFormat(LOCALE, { style: "currency", currency: "EUR" });
 const integer = new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 0 });
+const compact = new Intl.NumberFormat(LOCALE, { notation: "compact", maximumFractionDigits: 1 });
 const percent = new Intl.NumberFormat(LOCALE, {
   style: "percent",
   minimumFractionDigits: 0,
@@ -38,6 +39,11 @@ const dateTimeFmt = new Intl.DateTimeFormat(LOCALE, {
 /** 123456 → "1234,56 €" (formato pt-PT). */
 export function formatCents(cents: number): string {
   return currency.format(cents / 100);
+}
+
+/** 1250000 → "12,5 mil €" (eixos de gráficos). */
+export function formatCentsCompact(cents: number): string {
+  return `${compact.format(cents / 100)} €`;
 }
 
 export function formatInteger(value: number): string {

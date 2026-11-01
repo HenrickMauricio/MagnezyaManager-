@@ -504,6 +504,22 @@ A Magnezya desistiu do sistema. O projeto continua como **produto próprio**, pa
 | P7 | **Fotografias** dos artigos visíveis a clientes com sessão (necessárias na proposta). |
 | P8 | **Alertas:** respostas do portal nos últimos 14 dias no painel ("Respostas de clientes", com aviso de conflito) e banner na ficha do orçamento. Sem email (E1). |
 
+### 8.8 Relatórios (Fase 8, 31/10/2026)
+
+| # | Decisão |
+|---|---|
+| R1 | **Faturação** = valor sem IVA (total − IVA) das propostas **aprovadas** cuja reserva não foi cancelada. É faturação de gestão: o sistema continua a não emitir faturas (R4). As aprovadas e depois canceladas aparecem numa nota à parte. |
+| R2 | **Mês de referência** à escolha: mês do evento (início — quando o serviço é prestado; padrão) ou mês da aprovação (vendas fechadas). |
+| R3 | **Realizado vs futuro:** um evento conta como realizado a partir do dia de início; os futuros (já aprovados) aparecem no gráfico num tom mais claro e num indicador próprio. |
+| R4 | **Comparação:** no ano em curso compara com o mesmo período do ano anterior (janeiro → mês atual); nos anos fechados, ano inteiro. |
+| R5 | **Por artigo:** valor da linha menos a sua parte do desconto global (a mesma repartição do motor de preço); serviços somados à parte. |
+| R6 | **Desempenho por vendedor:** propostas emitidas pela primeira vez no ano e o seu desfecho; conversão = aprovadas ÷ (aprovadas + recusadas + expiradas + canceladas). As que estão em aberto não entram na conversão. |
+| R7 | **CSV** com separador ";", vírgula decimal e BOM UTF-8 (abre direto no Excel em português). |
+| R8 | **Acesso:** permissão `report:view` (administradores por omissão); página e CSV verificam-na no servidor. |
+| R9 | **Gráfico** em HTML/CSS no servidor (sem biblioteca): uma série em tons de cinzento validados (contraste ≥ 3:1 nos dois temas), tooltip ao passar o rato, com o teclado ou ao tocar, e a tabela com todos os valores. |
+
+**Pendente (Fase 8):** alojamento, armazenamento S3/R2, cópias de segurança, monitorização, testes E2E no repositório, revisão de segurança.
+
 ## 8.1 Questões originais (histórico)
 
 **D1 — Modelo de preço.** O preço de aluguer é (a) por evento/período (ex.: até 3 dias), (b) por dia, ou (c) degressivo (1.º dia preço total, dias seguintes com desconto)? *Proposta:* suportar (a) e (b) por artigo, com (c) como regra opcional.

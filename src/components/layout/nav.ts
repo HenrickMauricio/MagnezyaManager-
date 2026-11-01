@@ -61,7 +61,7 @@ export const NAV: NavGroup[] = [
     label: "Administração",
     items: [
       { label: "Utilizadores", href: "/utilizadores", icon: "users", permission: "user:manage" },
-      { label: "Relatórios", href: "/relatorios", icon: "reports", permission: "report:view", availableInPhase: 8 },
+      { label: "Relatórios", href: "/relatorios", icon: "reports", permission: "report:view" },
       { label: "Definições", href: "/definicoes", icon: "settings", permission: "settings:manage" },
     ],
   },

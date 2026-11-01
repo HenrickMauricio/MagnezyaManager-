@@ -38,6 +38,10 @@
   --sidebar-active: #ffffff;
   --sidebar-active-fg: #000000;
 
+  /* Gráficos (validados: luminosidade monótona e contraste ≥ 3:1 com a superfície). */
+  --chart-1: #0a0a0a;
+  --chart-1-light: #949494;
+
   color-scheme: light;
 }
 
@@ -71,6 +75,9 @@
   --sidebar-active: #ffffff;
   --sidebar-active-fg: #000000;
 
+  --chart-1: #ffffff;
+  --chart-1-light: #5e5e5e;
+
   color-scheme: dark;
 }
 
@@ -101,6 +108,8 @@
   --color-sidebar-hover: var(--sidebar-hover);
   --color-sidebar-active: var(--sidebar-active);
   --color-sidebar-active-fg: var(--sidebar-active-fg);
+  --color-chart-1: var(--chart-1);
+  --color-chart-1-light: var(--chart-1-light);
 
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-inter-tight), var(--font-inter), ui-sans-serif, system-ui, sans-serif;

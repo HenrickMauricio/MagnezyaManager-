@@ -145,6 +145,16 @@ tests/unit/       testes (node:test via tsx)
 - Propostas em revisão, expiradas ou já respondidas não aceitam resposta.
 - A equipa vê as respostas no painel ("Respostas de clientes") e na ficha do orçamento.
 
+### Relatórios
+
+- **Faturação mensal** (sem IVA, IVA e com IVA) por mês do evento ou por mês da aprovação, com
+  gráfico, comparação com o ano anterior e exportação CSV (pronta para o Excel em português).
+- Conta as propostas aprovadas pelos clientes cuja reserva não foi cancelada; separa eventos já
+  realizados de eventos futuros confirmados. É faturação de gestão — o sistema não emite faturas.
+- Clientes e artigos com maior faturação; desempenho por vendedor (emitidas, aprovadas, recusadas,
+  expiradas/canceladas, conversão e valor aprovado).
+- Acesso com a permissão "Ver relatórios" (administradores; pode ser dada a um vendedor).
+
 ### Catálogo e stock
 
 - O stock de um artigo = **stock inicial** (definido ao criar) **+ movimentos** (entrada, abate,
@@ -170,4 +180,4 @@ tests/unit/       testes (node:test via tsx)
 - [x] **Fase 5** — orçamentos (construtor, descontos com limite, IVA por taxa, aprovação → reserva)
 - [x] **Fase 6** — PDF e versões imutáveis (envio por email descartado: o PDF é enviado pelo programa de email do vendedor)
 - [x] **Fase 7** — portal do cliente (propostas, PDF, aprovar/recusar com registo, reservas, conta)
-- [ ] Fase 8 — testes, segurança e produção
+- [~] **Fase 8** — relatórios e faturação mensal *(falta: alojamento, cópias de segurança, monitorização, testes E2E no repositório, revisão de segurança)*
